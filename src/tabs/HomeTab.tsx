@@ -221,14 +221,14 @@ export default function HomeTab() {
             <div className="bg-blue-50 rounded-2xl p-3 text-center">
               <div className="flex items-center justify-center space-x-1 mb-1">
                 <ArrowDownLeft size={11} className="text-blue-500" />
-                <span className="text-[9px] font-bold text-blue-400 uppercase">받은</span>
+                <span className="text-[9px] font-bold text-blue-400 uppercase">받음</span>
               </div>
               <p className="text-base font-black text-blue-600">{(totalReceived / 10000).toFixed(0)}<span className="text-[10px] font-bold text-blue-400">만</span></p>
             </div>
             <div className="bg-red-50 rounded-2xl p-3 text-center">
               <div className="flex items-center justify-center space-x-1 mb-1">
                 <ArrowUpRight size={11} className="text-red-400" />
-                <span className="text-[9px] font-bold text-red-400 uppercase">보낸</span>
+                <span className="text-[9px] font-bold text-red-400 uppercase">보냄</span>
               </div>
               <p className="text-base font-black text-red-500">{(totalGiven / 10000).toFixed(0)}<span className="text-[10px] font-bold text-red-400">만</span></p>
             </div>
