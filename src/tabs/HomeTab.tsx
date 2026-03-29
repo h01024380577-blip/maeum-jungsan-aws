@@ -98,6 +98,10 @@ export default function HomeTab() {
         const result = await res.json();
         if (result.success && result.data) {
           responseText = JSON.stringify(result.data);
+        } else if (result.reason === 'rate_limit') {
+          toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
+          setIsParsing(false);
+          return;
         } else {
           // 서버 분석 실패 시 수동 입력 안내 (hallucination 방지를 위해 클라이언트 직접 호출 제거)
           toast.error('링크 분석에 실패했습니다. 직접 입력을 이용해 주세요.');
@@ -135,6 +139,8 @@ export default function HomeTab() {
       setParsedData(result); setInitialParsedData(result); setShowBottomSheet(true);
     } catch (err: any) {
       if (err?.message === 'API_KEY_MISSING') toast.error('API 키가 설정되지 않았습니다.');
+      else if (err?.message?.includes('429') || err?.message?.includes('quota') || err?.message?.includes('RESOURCE_EXHAUSTED'))
+        toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
       else toast.error('분석 실패. 직접 입력을 이용해 주세요.');
     } finally { setIsParsing(false); }
   };

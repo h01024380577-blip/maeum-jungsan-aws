@@ -49,6 +49,18 @@ function calculateConfidence(data: any): 'high' | 'medium' | 'low' {
   return filled >= 3 ? 'high' : filled >= 2 ? 'medium' : 'low';
 }
 
+/** Gemini API rate limit 에러인지 판별 */
+function isRateLimitError(err: any): boolean {
+  const msg = err?.message || JSON.stringify(err) || '';
+  return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
+}
+
+const RATE_LIMIT_RESPONSE = {
+  success: false as const,
+  reason: 'rate_limit' as const,
+  message: '무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.',
+};
+
 /**
  * Jina Reader API로 JS 렌더링된 페이지 텍스트 가져오기
  * SPA 사이트에서도 실제 콘텐츠를 추출할 수 있음
@@ -138,6 +150,9 @@ export async function POST(request: Request) {
         }
       } catch (e: any) {
         console.error('[parse-url] Phase 1a error:', e?.message);
+        if (isRateLimitError(e)) {
+          return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
+        }
       }
     }
 
@@ -168,6 +183,9 @@ ${OUTPUT_SCHEMA}`;
       }
     } catch (e: any) {
       console.error('[parse-url] Phase 2 (Jina) error:', e?.message);
+      if (isRateLimitError(e)) {
+        return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
+      }
     }
 
     // ========== Phase 3: Gemini urlContext (최후 수단) ==========
@@ -191,6 +209,9 @@ ${OUTPUT_SCHEMA}`;
       return NextResponse.json({ success: true, data, confidence, source: 'url-context' });
     } catch (e: any) {
       console.error('[parse-url] Phase 3 error:', e?.message);
+      if (isRateLimitError(e)) {
+        return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
+      }
       return NextResponse.json(
         { success: false, reason: 'ai_failed', message: 'AI 분석에 실패했습니다.' },
         { status: 500 },
