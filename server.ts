@@ -26,8 +26,8 @@ try {
   console.error("Firebase Admin initialization failed:", e);
 }
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BEm-p0mLRpFUf2KCCAkXssryxXSt-ubluosgR0psGehl7CYzQ1G7Hmflix7wWdQnDRdp7OjjwKr3MlBarGYDwDo';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'dwqWMRJ5IPXPRgg4ueiMTEIrX2UBwLUghfVoj9qOZ4U';
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 
 webpush.setVapidDetails(
   'mailto:h01024380577@gmail.com',
