@@ -73,7 +73,7 @@ export default function CalendarTab() {
                 </div>
                 <div className="text-right">
                   <p className={`text-sm font-black ${e.type === 'INCOME' ? 'text-blue-600' : 'text-red-500'}`}>
-                    {e.type === 'INCOME' ? '+' : '-'}{e.amount.toLocaleString()}원
+                    {e.type === 'INCOME' ? '+' : '-'}{e.amount.toLocaleString()}
                   </p>
                   <p className="text-[10px] text-gray-400 font-medium">{e.relation}</p>
                 </div>
