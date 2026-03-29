@@ -5,11 +5,15 @@
 }
 
 @layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
   body {
     @apply bg-zinc-900 text-gray-900 antialiased;
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
+    overflow-x: hidden;
   }
 }
 

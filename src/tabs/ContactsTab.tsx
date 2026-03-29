@@ -84,16 +84,16 @@ export default function ContactsTab() {
               <motion.div layout key={c.id} onClick={() => setSelectedContactId(c.id)}
                 className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
               >
-                <div className="flex items-center space-x-3.5">
-                  <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                <div className="flex items-center space-x-3.5 min-w-0 flex-1">
+                  <div className="w-11 h-11 shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
                     <User size={22} />
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900">{c.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-gray-900 truncate">{c.name}</h3>
                     <p className="text-[10px] text-gray-400 font-medium">{c.relation} · {cnt}건</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 shrink-0">
                   <div className="text-right">
                     <div className={`text-sm font-black flex items-center justify-end ${bal >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
                       {bal >= 0 ? <TrendingUp size={11} className="mr-1" /> : <TrendingDown size={11} className="mr-1" />}

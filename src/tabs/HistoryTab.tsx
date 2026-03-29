@@ -71,13 +71,13 @@ export default function HistoryTab() {
           {filtered.length > 0 ? filtered.map(e => (
             <div key={e.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between group relative overflow-hidden">
               <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full ${e.type === 'INCOME' ? 'bg-blue-500' : 'bg-red-400'}`} />
-              <div className="flex items-center space-x-3 pl-2">
+              <div className="flex items-center space-x-3 pl-2 min-w-0 flex-1">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${e.type === 'INCOME' ? 'bg-blue-50' : 'bg-red-50'}`}>
                   {eventIcon(e.eventType)}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center space-x-2">
-                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${e.type === 'INCOME' ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
+                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded shrink-0 ${e.type === 'INCOME' ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
                       {e.type === 'INCOME' ? 'IN' : 'OUT'}
                     </span>
                     <button
@@ -85,12 +85,12 @@ export default function HistoryTab() {
                       className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors"
                     >{e.targetName}</button>
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-0.5 font-medium">
+                  <p className="text-[10px] text-gray-400 mt-0.5 font-medium truncate">
                     {safeDate(e.date)} · {eventLabel(e.eventType, e.customEventName)} {e.location ? `· ${e.location}` : ''}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 shrink-0">
                 <div className="text-right">
                   <p className={`text-sm font-black ${e.type === 'INCOME' ? 'text-blue-600' : 'text-red-500'}`}>
                     {e.type === 'INCOME' ? '+' : '-'}{e.amount.toLocaleString()}

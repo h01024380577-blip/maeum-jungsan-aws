@@ -223,18 +223,18 @@ export default function HomeTab() {
             <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
               <LinkIcon size={16} className="text-blue-500" />
             </div>
-            <span className="text-sm font-bold text-gray-800">모바일 청첩장 링크 (URL)</span>
+            <span className="text-sm font-bold text-gray-800">청첩장 링크 <span className="hidden xs:inline">(URL)</span></span>
           </div>
-          <div className="flex space-x-2.5">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2.5">
             <input
               type="text" value={inputUrl} onChange={(e) => setInputUrl(e.target.value)}
               placeholder="https://mcard.kakao.com/..."
-              className="flex-1 px-4 py-3 bg-gray-50 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-gray-300 border border-gray-100"
+              className="min-w-0 flex-1 px-4 py-3 bg-gray-50 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-gray-300 border border-gray-100"
             />
             <button
               onClick={() => handleParse({ type: 'url', data: inputUrl })}
               disabled={isParsing || !inputUrl.trim()}
-              className={`px-5 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center space-x-1.5 whitespace-nowrap ${
+              className={`shrink-0 px-4 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center space-x-1.5 whitespace-nowrap ${
                 isParsing || !inputUrl.trim() ? 'bg-gray-100 text-gray-300 border border-gray-100' : 'bg-blue-500 text-white shadow-md shadow-blue-200'
               }`}
             >
@@ -340,7 +340,7 @@ export default function HomeTab() {
         {showBottomSheet && parsedData && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBottomSheet(false)} className="fixed inset-0 bg-black/40 z-[60]" />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[28px] p-6 z-[70] shadow-2xl">
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[28px] px-4 py-5 sm:p-6 z-[70] shadow-2xl overflow-x-hidden">
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-black text-gray-900">분석 결과 확인</h3>
@@ -358,7 +358,7 @@ export default function HomeTab() {
                 </div>
 
                 <Field label="이름" type="contact" value={parsedData.targetName} ai={!!initialParsedData?.targetName} onChange={(v: string, cid?: string) => setParsedData({...parsedData, targetName: v, contactId: cid})} contacts={contacts} />
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2">
                   <Field label="날짜" type="date" value={parsedData.date} ai={!!initialParsedData?.date} onChange={(v: string) => setParsedData({...parsedData, date: v})} />
                   <Field label="종류" type="select" value={parsedData.eventType} ai={!!initialParsedData?.eventType} options={['wedding', 'funeral', 'birthday', 'other']} onChange={(v: string) => setParsedData({...parsedData, eventType: v as EventType})} />
                 </div>
@@ -376,9 +376,9 @@ export default function HomeTab() {
                     <input type="number" step="10000" value={parsedData.amount} onChange={(e) => setParsedData({...parsedData, amount: Number(e.target.value)})} className="flex-1 bg-transparent text-2xl font-black text-blue-700 outline-none" />
                     <span className="text-base font-bold text-blue-500">원</span>
                   </div>
-                  <div className="flex space-x-2 mt-3">
+                  <div className="flex space-x-1.5 sm:space-x-2 mt-3">
                     {[{ l: '-1만', d: -10000 }, { l: '+1만', d: 10000 }, { l: '+5만', d: 50000 }, { l: '+10만', d: 100000 }].map(b => (
-                      <button key={b.l} onClick={() => setParsedData({...parsedData, amount: Math.max(0, (parsedData.amount || 0) + b.d)})} className="flex-1 py-2 bg-white/70 hover:bg-white rounded-lg text-[10px] font-bold text-blue-600 border border-blue-100 transition-colors active:scale-95">{b.l}</button>
+                      <button key={b.l} onClick={() => setParsedData({...parsedData, amount: Math.max(0, (parsedData.amount || 0) + b.d)})} className="flex-1 py-2 bg-white/70 hover:bg-white rounded-lg text-[10px] font-bold text-blue-600 border border-blue-100 transition-colors active:scale-95 min-w-0">{b.l}</button>
                     ))}
                   </div>
                 </div>

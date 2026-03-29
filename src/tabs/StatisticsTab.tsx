@@ -42,7 +42,7 @@ export default function StatisticsTab() {
 
       <div className="px-5 pt-4 space-y-4">
         {/* Summary */}
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
           <div className="bg-blue-50 rounded-2xl p-3.5 text-center">
             <TrendingUp size={14} className="text-blue-500 mx-auto mb-1" />
             <p className="text-[10px] font-bold text-blue-400">총 수입</p>
