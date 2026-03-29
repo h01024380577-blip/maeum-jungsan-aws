@@ -89,23 +89,29 @@ export default function HomeTab() {
       const sysInst = `Extract event info in JSON. NER: eventType("wedding"|"funeral"|"birthday"|"other"), date(YYYY-MM-DD, default 2026), location, targetName, relation("가족"|"절친"|"직장 동료"|"지인"), type("EXPENSE"|"INCOME"), account(bank info).`;
 
       if (type === 'url') {
-        // Gemini에 URL 직접 전달하여 분석
-        responseText = (await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: `다음 URL의 경조사 초대장 정보를 분석해줘: ${data}`,
-          config: { systemInstruction: sysInst, responseMimeType: "application/json" }
-        })).text || "{}";
-        // 결과가 빈 경우 URL 자체에서 유추
+        // 서버사이드 HTML 파싱 → Gemini 분석
+        let serverParsed = false;
         try {
-          const check = JSON.parse(responseText);
-          if (!check.targetName && !check.eventType && !check.date) {
-            responseText = (await ai.models.generateContent({
-              model: "gemini-2.5-flash",
-              contents: `이 URL은 경조사 초대장 링크야. URL에서 유추할 수 있는 정보를 최대한 추출해줘: ${data}`,
-              config: { systemInstruction: sysInst, responseMimeType: "application/json" }
-            })).text || "{}";
+          const res = await fetch('/api/parse-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: data }),
+          });
+          const result = await res.json();
+          if (result.success && result.data) {
+            responseText = JSON.stringify(result.data);
+            serverParsed = true;
           }
         } catch {}
+
+        // fallback: 서버 파싱 실패 시 기존 클라이언트 직접 Gemini 호출
+        if (!serverParsed) {
+          responseText = (await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `다음 URL의 경조사 초대장 정보를 분석해줘: ${data}`,
+            config: { systemInstruction: sysInst, responseMimeType: "application/json" }
+          })).text || "{}";
+        }
       } else if (type === 'image') {
         const b64 = data.split(',')[1];
         const gen = (m: string) => ai.models.generateContent({ model: m, contents: { parts: [{ inlineData: { data: b64, mimeType: "image/jpeg" } }, { text: "Extract event info." }] }, config: { systemInstruction: sysInst, responseMimeType: "application/json" } }).then(r => r.text || "{}");
