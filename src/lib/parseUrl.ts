@@ -49,6 +49,34 @@ export function extractJsonLd(html: string): object | null {
 }
 
 /**
+ * Task 4: 추출 데이터가 Gemini 분석에 충분한지 판단
+ * - og 태그에 경조사 키워드가 포함되어 있거나
+ * - 본문 텍스트가 50자 이상이면 충분하다고 판단
+ */
+const MEANINGLESS_TITLES = ['loading', 'theirmood', 'redirect', '모바일청첩장', ''];
+const EVENT_KEYWORDS = ['결혼', '부고', '장례', '돌잔치', '생일', '초대', '축하', '故', '별세', '발인'];
+
+export function hasEnoughData(meta: PageMeta, bodyText: string): boolean {
+  // 본문이 충분하면 OK
+  if (bodyText.trim().length > 50) return true;
+
+  // og 태그에 의미 있는 내용이 있는지 확인
+  const titleLower = (meta.title || '').toLowerCase().trim();
+  if (MEANINGLESS_TITLES.some(t => titleLower === t || titleLower.includes('loading'))) {
+    return false;
+  }
+
+  // og title이나 description에 경조사 키워드가 있으면 충분
+  const combined = `${meta.title} ${meta.description}`;
+  if (EVENT_KEYWORDS.some(kw => combined.includes(kw))) return true;
+
+  // description이 20자 이상이면 충분
+  if ((meta.description || '').trim().length > 20) return true;
+
+  return false;
+}
+
+/**
  * Task 3: 본문 텍스트 추출 (script/style/nav/footer 제거, 3000자 제한)
  */
 export function extractBodyText(html: string): string {

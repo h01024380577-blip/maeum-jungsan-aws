@@ -141,3 +141,48 @@ describe('extractBodyText', () => {
     expect(text.length).toBeLessThanOrEqual(3000);
   });
 });
+
+// ========================================
+// Task 4: hasEnoughData - 추출 데이터 충분성 판단
+// ========================================
+import { hasEnoughData } from './parseUrl';
+
+// SPA 빈 HTML (theirmood.com 같은 케이스)
+const SPA_EMPTY_HTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>theirmood</title>
+  <script defer src="/assets/index.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>`;
+
+describe('hasEnoughData', () => {
+  it('og 태그와 본문이 충분하면 true', () => {
+    const meta = { title: '김진호 결혼식', description: '2026년 3월 15일', image: '', siteName: '' };
+    const bodyText = '결혼합니다 김진호 이수연 서울 강남구 역삼동 그랜드볼룸';
+    expect(hasEnoughData(meta, bodyText)).toBe(true);
+  });
+
+  it('SPA 빈 HTML에서 추출한 데이터는 false', () => {
+    const meta = { title: 'theirmood', description: '', image: '', siteName: '' };
+    const bodyText = '';
+    expect(hasEnoughData(meta, bodyText)).toBe(false);
+  });
+
+  it('og 태그만 있고 본문이 없어도 og에 핵심 정보가 있으면 true', () => {
+    const meta = { title: '故 박영수님 부고', description: '2026년 4월 1일, 서울대학교병원', image: '', siteName: '' };
+    const bodyText = '';
+    expect(hasEnoughData(meta, bodyText)).toBe(true);
+  });
+
+  it('title만 있고 의미 없는 사이트명이면 false', () => {
+    const meta = { title: 'Loading...', description: '', image: '', siteName: '' };
+    const bodyText = '';
+    expect(hasEnoughData(meta, bodyText)).toBe(false);
+  });
+});

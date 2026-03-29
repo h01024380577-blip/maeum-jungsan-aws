@@ -89,28 +89,20 @@ export default function HomeTab() {
       const sysInst = `Extract event info in JSON. NER: eventType("wedding"|"funeral"|"birthday"|"other"), date(YYYY-MM-DD, default 2026), location, targetName, relation("가족"|"절친"|"직장 동료"|"지인"), type("EXPENSE"|"INCOME"), account(bank info).`;
 
       if (type === 'url') {
-        // 서버사이드 HTML 파싱 → Gemini 분석
-        let serverParsed = false;
-        try {
-          const res = await fetch('/api/parse-url', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: data }),
-          });
-          const result = await res.json();
-          if (result.success && result.data) {
-            responseText = JSON.stringify(result.data);
-            serverParsed = true;
-          }
-        } catch {}
-
-        // fallback: 서버 파싱 실패 시 기존 클라이언트 직접 Gemini 호출
-        if (!serverParsed) {
-          responseText = (await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `다음 URL의 경조사 초대장 정보를 분석해줘: ${data}`,
-            config: { systemInstruction: sysInst, responseMimeType: "application/json" }
-          })).text || "{}";
+        // 서버사이드 HTML 파싱 + Gemini URL Context 분석
+        const res = await fetch('/api/parse-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: data }),
+        });
+        const result = await res.json();
+        if (result.success && result.data) {
+          responseText = JSON.stringify(result.data);
+        } else {
+          // 서버 분석 실패 시 수동 입력 안내 (hallucination 방지를 위해 클라이언트 직접 호출 제거)
+          toast.error('링크 분석에 실패했습니다. 직접 입력을 이용해 주세요.');
+          setIsParsing(false);
+          return;
         }
       } else if (type === 'image') {
         const b64 = data.split(',')[1];
