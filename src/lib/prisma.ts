@@ -1,17 +1,21 @@
-let prismaInstance: any = null;
+let _prisma: any = null;
 
-export function getPrisma() {
-  if (!prismaInstance) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+export function getPrismaClient() {
+  if (!_prisma) {
     const { PrismaClient } = require('@prisma/client');
-    prismaInstance = new PrismaClient();
+    _prisma = new PrismaClient();
   }
-  return prismaInstance;
+  return _prisma;
 }
 
-// 호환성을 위한 export
-export const prisma = new Proxy({} as any, {
+// Proxy로 lazy 접근 — 빌드 시 DB 연결 방지
+export const prisma: any = new Proxy({}, {
   get(_target, prop) {
-    return getPrisma()[prop];
+    const client = getPrismaClient();
+    const value = client[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
   },
 });
