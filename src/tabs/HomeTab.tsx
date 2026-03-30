@@ -312,7 +312,7 @@ export default function HomeTab() {
               <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center">
                 <Send size={16} className="text-gray-400" />
               </div>
-              <span className="text-sm font-bold text-gray-800">텍스트 직접 입력</span>
+              <span className="text-sm font-bold text-gray-800">텍스트 붙여넣기</span>
             </div>
             {inputText && <button onClick={() => setInputText('')} className="text-gray-300 hover:text-gray-500"><CloseIcon size={14} /></button>}
           </div>
