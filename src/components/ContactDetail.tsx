@@ -53,7 +53,7 @@ export default function ContactDetail({ contactId, onBack }: { contactId: string
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{contact.name}님과의 마음 정산</p>
           <motion.h2 key={balance} initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
             className={`text-4xl font-black tracking-tight ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
-            {balance >= 0 ? '+' : ''}{balance.toLocaleString()}<span className="text-lg ml-1">원</span>
+            {balance >= 0 ? '+' : ''}{balance.toLocaleString()}
           </motion.h2>
           <span className={`inline-block px-3 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${balance >= 0 ? 'bg-blue-50 text-blue-500' : 'bg-red-50 text-red-500'}`}>
             {balance >= 0 ? 'Surplus' : 'Deficit'}
@@ -100,7 +100,7 @@ export default function ContactDetail({ contactId, onBack }: { contactId: string
               </div>
             </div>
             <p className={`text-sm font-black ${entry.type === 'EXPENSE' ? 'text-red-500' : 'text-blue-600'}`}>
-              {entry.type === 'EXPENSE' ? '-' : '+'}{entry.amount.toLocaleString()}원
+              {entry.type === 'EXPENSE' ? '-' : '+'}{entry.amount.toLocaleString()}
             </p>
           </div>
         )) : (
