@@ -322,7 +322,7 @@ export default function HomeTab() {
           </div>
           <textarea
             value={inputText} onChange={(e) => setInputText(e.target.value)}
-            placeholder="청첩장 문구를 붙여넣으세요..."
+            placeholder="텍스트를 붙여넣으세요..."
             className="w-full h-20 p-3.5 bg-gray-50 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 resize-none transition-all placeholder:text-gray-300 border border-gray-100"
           />
           {inputText.trim() && (
