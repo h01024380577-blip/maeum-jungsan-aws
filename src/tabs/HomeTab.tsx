@@ -254,7 +254,7 @@ export default function HomeTab() {
             <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
               <LinkIcon size={16} className="text-blue-500" />
             </div>
-            <span className="text-sm font-bold text-gray-800">청첩장 링크 <span className="hidden xs:inline">(URL)</span></span>
+            <span className="text-sm font-bold text-gray-800">링크 업로드</span>
           </div>
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2.5">
             <input
@@ -381,10 +381,10 @@ export default function HomeTab() {
               <div className="space-y-3 max-h-[55vh] overflow-y-auto pb-2 no-scrollbar">
                 <div className="flex bg-gray-100 p-1 rounded-xl">
                   <button onClick={() => setParsedData({...parsedData, type: 'EXPENSE', isIncome: false})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${parsedData.type === 'EXPENSE' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400'}`}>
-                    <ArrowUpRight size={12} /><span>보낸 돈 (OUT)</span>
+                    <ArrowUpRight size={12} /><span>보냄 (OUT)</span>
                   </button>
                   <button onClick={() => setParsedData({...parsedData, type: 'INCOME', isIncome: true})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${parsedData.type === 'INCOME' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>
-                    <ArrowDownLeft size={12} /><span>받은 돈 (IN)</span>
+                    <ArrowDownLeft size={12} /><span>받음 (IN)</span>
                   </button>
                 </div>
 

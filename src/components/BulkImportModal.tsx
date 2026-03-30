@@ -158,7 +158,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                       }`}
                     >
                       <div className={`w-2 h-2 rounded-full ${transactionType === 'INCOME' ? 'bg-white' : 'bg-blue-400'}`} />
-                      <span>받은 금액 (수입 / INCOME)</span>
+                      <span>받음 (수입 / INCOME)</span>
                     </button>
                     <button
                       onClick={() => setTransactionType('EXPENSE')}
@@ -169,7 +169,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                       }`}
                     >
                       <div className={`w-2 h-2 rounded-full ${transactionType === 'EXPENSE' ? 'bg-white' : 'bg-red-400'}`} />
-                      <span>낸 금액 (지출 / EXPENSE)</span>
+                      <span>보냄 (지출 / EXPENSE)</span>
                     </button>
                   </div>
                 </div>

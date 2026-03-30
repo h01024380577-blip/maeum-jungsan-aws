@@ -59,7 +59,7 @@ export default function HistoryTab() {
 
         {/* Filter */}
         <div className="flex space-x-2">
-          {([['all', '전체'], ['given', '보낸'], ['received', '받은']] as const).map(([key, label]) => (
+          {([['all', '전체'], ['given', '보냄'], ['received', '받음']] as const).map(([key, label]) => (
             <button key={key} onClick={() => setFilter(key)} className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${filter === key ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-gray-400 border border-gray-100'}`}>
               {label}
             </button>
