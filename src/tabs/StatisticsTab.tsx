@@ -20,8 +20,9 @@ export default function StatisticsTab() {
   const balance = totalIncome - totalExpense;
 
   const byEventType = filtered.reduce((acc: any[], e) => {
-    const f = acc.find(x => x.name === e.eventType);
-    if (f) f.value += e.amount; else acc.push({ name: e.eventType, value: e.amount });
+    const label = eventLabel(e.eventType);
+    const f = acc.find(x => x.name === label);
+    if (f) f.value += e.amount; else acc.push({ name: label, value: e.amount });
     return acc;
   }, []);
 
