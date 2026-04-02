@@ -176,7 +176,7 @@ export default function HomeTab() {
       setShowBottomSheet(false); setInputText(''); setInputUrl(''); setSelectedImage(null); setParsedData(null); setInitialParsedData(null);
     } catch (err: any) {
       console.error('Save failed:', err);
-      toast.error('저장에 실패했습니다. 로그인 상태를 확인해 주세요.');
+      toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`);
     }
   };
 

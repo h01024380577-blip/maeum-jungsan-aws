@@ -67,8 +67,9 @@ interface AppState {
 async function getUserId(): Promise<string> {
   try {
     const session = await getSession();
+    console.log('[getUserId] session:', session?.user?.id ? 'logged in: ' + session.user.id : 'not logged in');
     if (session?.user?.id) return session.user.id;
-  } catch {}
+  } catch (e) { console.error('[getUserId] error:', e); }
 
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('heartbook-device-id');
@@ -174,7 +175,7 @@ export const useStore = create<AppState>()((set, get) => ({
       user_id: userId,
     }).select().single();
 
-    if (error) { console.error('Insert entry error:', error); throw new Error(error.message); }
+    if (error) { console.error('Insert entry error:', JSON.stringify(error)); throw new Error(`Supabase insert failed: ${error.message} (code: ${error.code})`); }
 
     set((state) => ({
       entries: [toEntry(data), ...state.entries],
@@ -192,7 +193,7 @@ export const useStore = create<AppState>()((set, get) => ({
       user_id: userId,
     }).select().single();
 
-    if (error) { console.error('Insert contact error:', error); throw new Error(error.message); }
+    if (error) { console.error('Insert contact error:', JSON.stringify(error)); throw new Error(`Supabase contact insert failed: ${error.message} (code: ${error.code})`); }
 
     const newContact = toContact(data);
     set((state) => ({ contacts: [...state.contacts, newContact] }));
