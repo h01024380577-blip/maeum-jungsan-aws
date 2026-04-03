@@ -151,8 +151,8 @@ export default function HomeTab() {
       }
       amt = Math.round(amt / 10000) * 10000;
 
-      const result = { ...parsed, date: parsed.date || format(new Date(), 'yyyy-MM-dd'), amount: parsed.amount || amt, recommendationReason: reason, type: parsed.type || 'EXPENSE', isIncome: parsed.type === 'INCOME', relation: parsed.relation || '친구' };
-      setParsedData(result); setInitialParsedData(result); setShowBottomSheet(true);
+      const finalData = { ...parsed, date: parsed.date || format(new Date(), 'yyyy-MM-dd'), amount: parsed.amount || amt, recommendationReason: reason, type: parsed.type || 'EXPENSE', isIncome: parsed.type === 'INCOME', relation: parsed.relation || '친구' };
+      setParsedData(finalData); setInitialParsedData(finalData); setShowBottomSheet(true);
     } catch (err: any) {
       toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`);
       setSelectedImage(null); setInputUrl(''); setInputText('');

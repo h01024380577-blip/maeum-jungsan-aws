@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/src/lib/prisma';
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
@@ -8,28 +8,20 @@ export async function GET(request: Request) {
   }
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const start = new Date(new Date(tomorrow).setHours(0, 0, 0, 0));
+    const end = new Date(new Date(tomorrow).setHours(23, 59, 59, 999));
 
-    const { data: entries } = await supabase
-      .from('entries')
-      .select('*')
-      .eq('date', tomorrowStr);
+    const events = await prisma.event.findMany({
+      where: { date: { gte: start, lte: end } },
+    });
 
-    if (!entries || entries.length === 0) {
+    if (events.length === 0) {
       return NextResponse.json({ message: 'No events for tomorrow' });
     }
 
-    return NextResponse.json({ message: `Found ${entries.length} events for tomorrow` });
+    return NextResponse.json({ message: `Found ${events.length} events for tomorrow` });
   } catch (error: any) {
     console.error('Cron notify failed:', error);
     return NextResponse.json({ error: 'Failed', details: error.message }, { status: 500 });
