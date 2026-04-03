@@ -3,7 +3,6 @@ import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
-import { GoogleGenAI } from "@google/genai";
 import { toast } from 'sonner';
 import { tossLogin } from '@/src/lib/tossAuth';
 
@@ -90,49 +89,26 @@ export default function HomeTab() {
 
     setIsParsing(true);
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey) throw new Error('API_KEY_MISSING');
-      const ai = new GoogleGenAI({ apiKey });
-      let responseText = "";
-      const sysInst = `Extract event info in JSON. NER: eventType("wedding"|"funeral"|"birthday"|"other"), date(YYYY-MM-DD, default 2026), location, targetName, relation("가족"|"절친"|"직장 동료"|"지인"), type("EXPENSE"|"INCOME"), account(bank info).`;
+      // 모든 분석을 서버 API Route로 위임 (NEXT_PUBLIC 키 노출 제거)
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, data }),
+      });
+      const result = await res.json();
 
-      if (type === 'url') {
-        // 서버사이드 HTML 파싱 + Gemini URL Context 분석
-        const res = await fetch('/api/parse-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: data }),
-        });
-        const result = await res.json();
-        if (result.success && result.data) {
-          responseText = JSON.stringify(result.data);
-        } else if (result.reason === 'rate_limit') {
+      if (!result.success) {
+        if (result.reason === 'rate_limit') {
           toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
-          setSelectedImage(null); setInputUrl(''); setInputText('');
-          setIsParsing(false);
-          return;
         } else {
-          // 서버 분석 실패 시 수동 입력 안내 (hallucination 방지를 위해 클라이언트 직접 호출 제거)
-          toast.error('링크 분석에 실패했습니다. 직접 입력을 이용해 주세요.');
-          setSelectedImage(null); setInputUrl(''); setInputText('');
-          setIsParsing(false);
-          return;
+          toast.error('분석 실패. 직접 입력을 이용해 주세요.');
         }
-      } else if (type === 'image') {
-        const b64 = data.split(',')[1];
-        const gen = (m: string) => ai.models.generateContent({ model: m, contents: { parts: [{ inlineData: { data: b64, mimeType: "image/jpeg" } }, { text: "Extract event info." }] }, config: { systemInstruction: sysInst, responseMimeType: "application/json" } }).then(r => r.text || "{}");
-        try { responseText = await Promise.race([gen("gemini-2.5-flash"), new Promise<string>((_, rej) => setTimeout(() => rej("timeout"), 8000))]); }
-        catch (imgErr: any) {
-          // rate limit은 재시도 없이 바깥 catch로 전파
-          if (imgErr?.message?.includes('429') || imgErr?.message?.includes('quota') || imgErr?.message?.includes('RESOURCE_EXHAUSTED')) throw imgErr;
-          responseText = await gen("gemini-2.5-pro-preview-06-05");
-        }
-      } else {
-        responseText = (await ai.models.generateContent({ model: "gemini-2.5-flash", contents: data, config: { systemInstruction: sysInst, responseMimeType: "application/json" } })).text || "{}";
+        setSelectedImage(null); setInputUrl(''); setInputText('');
+        setIsParsing(false);
+        return;
       }
 
-      let parsed: any;
-      try { parsed = JSON.parse(responseText || "{}"); } catch { const m = responseText.match(/\{[\s\S]*\}/); parsed = m ? JSON.parse(m[0]) : {}; }
+      const parsed = result.data;
 
       let amt = 100000, reason = "통계 기반 평균";
       const past = entries.find(e => e.targetName === parsed.targetName && e.eventType === parsed.eventType);
@@ -152,10 +128,7 @@ export default function HomeTab() {
       const result = { ...parsed, date: parsed.date || format(new Date(), 'yyyy-MM-dd'), amount: parsed.amount || amt, recommendationReason: reason, type: parsed.type || 'EXPENSE', isIncome: parsed.type === 'INCOME', relation: parsed.relation || '친구' };
       setParsedData(result); setInitialParsedData(result); setShowBottomSheet(true);
     } catch (err: any) {
-      if (err?.message === 'API_KEY_MISSING') toast.error('API 키가 설정되지 않았습니다.');
-      else if (err?.message?.includes('429') || err?.message?.includes('quota') || err?.message?.includes('RESOURCE_EXHAUSTED'))
-        toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
-      else toast.error('분석 실패. 직접 입력을 이용해 주세요.');
+      toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`);
       setSelectedImage(null); setInputUrl(''); setInputText('');
     } finally { setIsParsing(false); }
   };
