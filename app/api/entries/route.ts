@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
 
 function getUserId(req: NextRequest): string | null {
-  return req.cookies.get('toss_user_id')?.value ?? null;
+  // 1순위: 토스 로그인 쿠키
+  const cookie = req.cookies.get('toss_user_id')?.value;
+  if (cookie) return cookie;
+  // 2순위: 클라이언트가 헤더로 전달한 device ID (비로그인 게스트)
+  return req.headers.get('x-user-id') ?? null;
 }
 
 function toEventEntry(event: any, tx: any) {

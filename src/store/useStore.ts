@@ -57,6 +57,14 @@ interface AppState {
   resetAnalysis: () => void;
 }
 
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const userId = await getUserId();
+  return {
+    'Content-Type': 'application/json',
+    'x-user-id': userId,
+  };
+}
+
 export const useStore = create<AppState>()((set, get) => ({
   entries: [],
   contacts: [],
@@ -74,8 +82,8 @@ export const useStore = create<AppState>()((set, get) => ({
   loadFromSupabase: async () => {
     try {
       const [entriesRes, contactsRes] = await Promise.all([
-        fetch('/api/entries').then(r => r.ok ? r.json() : { entries: [] }),
-        fetch('/api/contacts').then(r => r.ok ? r.json() : { contacts: [] }),
+        fetch('/api/entries', { headers: await getAuthHeaders() }).then(r => r.ok ? r.json() : { entries: [] }),
+        fetch('/api/contacts', { headers: await getAuthHeaders() }).then(r => r.ok ? r.json() : { contacts: [] }),
       ]);
       set({
         entries: entriesRes.entries ?? [],
@@ -90,7 +98,7 @@ export const useStore = create<AppState>()((set, get) => ({
   addEntry: async (entry) => {
     const res = await fetch('/api/entries', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getAuthHeaders(),
       body: JSON.stringify(entry),
     });
     if (!res.ok) {
@@ -102,14 +110,14 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   removeEntry: async (id) => {
-    await fetch(`/api/entries?id=${id}`, { method: 'DELETE' });
+    await fetch(`/api/entries?id=${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
     set(state => ({ entries: state.entries.filter(e => e.id !== id) }));
   },
 
   updateEntry: async (id, updatedFields) => {
     await fetch(`/api/entries?id=${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updatedFields),
     });
     set(state => ({
@@ -120,7 +128,7 @@ export const useStore = create<AppState>()((set, get) => ({
   addContact: async (contact) => {
     const res = await fetch('/api/contacts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getAuthHeaders(),
       body: JSON.stringify(contact),
     });
     if (!res.ok) throw new Error('Contact 저장 실패');
@@ -132,7 +140,7 @@ export const useStore = create<AppState>()((set, get) => ({
   updateContact: async (id, updatedFields) => {
     await fetch(`/api/contacts?id=${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getAuthHeaders(),
       body: JSON.stringify(updatedFields),
     });
     set(state => ({

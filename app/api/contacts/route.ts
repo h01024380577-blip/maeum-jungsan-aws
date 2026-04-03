@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
 
 function getUserId(req: NextRequest): string | null {
-  return req.cookies.get('toss_user_id')?.value ?? null;
+  const cookie = req.cookies.get('toss_user_id')?.value;
+  if (cookie) return cookie;
+  return req.headers.get('x-user-id') ?? null;
 }
 
 function toContact(row: any) {
