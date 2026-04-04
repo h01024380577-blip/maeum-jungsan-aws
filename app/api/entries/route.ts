@@ -46,6 +46,12 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
   const result = await prisma.$transaction(async (tx: any) => {
+    // userId가 User 테이블에 없으면 자동 생성 (비로그인 게스트)
+    await tx.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId },
+    });
     let contactId = body.contactId || null;
     if (!contactId && body.targetName) {
       const existing = await tx.contact.findFirst({ where: { userId, name: body.targetName } });
