@@ -79,7 +79,7 @@ async function getUserId(): Promise<string> {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('heartbook-device-id');
     if (stored) return stored;
-    const id = crypto.randomUUID();
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36);
     localStorage.setItem('heartbook-device-id', id);
     return id;
   }
