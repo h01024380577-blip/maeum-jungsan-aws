@@ -532,7 +532,7 @@ export default function HomeTab() {
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-gray-900">토스페이로 송금</h3>
-                  <p className="text-sm text-gray-400 mt-1">계좌번호가 복사되고<br/>토스 앱 송금 화면으로 이동합니다</p>
+                  <p className="text-sm text-gray-400 mt-1">계좌번호가 복사됩니다.<br/>토스 앱에서 붙여넣기로 송금하세요</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-xs text-gray-400 mb-1">계좌번호</p>
@@ -548,13 +548,8 @@ export default function HomeTab() {
                       toast.success('계좌번호가 복사되었습니다');
                       setShowTransferModal(false);
                       setTimeout(() => {
-                        const { bank, accountNo } = parseAccount(savedAccount);
-                        // 토스 앱 송금 딥링크 (계좌 정보 포함)
-                        const params = new URLSearchParams();
-                        if (bank) params.set('bank', bank);
-                        if (accountNo) params.set('accountNo', accountNo.replace(/-/g, ''));
-                        const deeplink = `supertoss://send?${params.toString()}`;
-                        window.location.href = deeplink;
+                        // 토스 앱 송금 화면으로 이동 (복사된 계좌번호를 붙여넣기)
+                        window.location.href = 'supertoss://send';
                       }, 300);
                     } catch {
                       toast.error('토스 앱을 열 수 없습니다.');
