@@ -7,6 +7,16 @@ import { toast } from 'sonner';
 import { tossLogin } from '@/src/lib/tossAuth';
 
 
+
+// 계좌번호 문자열에서 은행명과 계좌번호 파싱
+// 예: "신한은행 110-123-456789 김진호" → { bank: "신한은행", accountNo: "110-123-456789" }
+function parseAccount(account: string): { bank: string; accountNo: string } {
+  const parts = account.trim().split(/\s+/);
+  const bank = parts[0] || '';
+  const accountNo = parts[1] || '';
+  return { bank, accountNo };
+}
+
 // HTTP 환경에서도 동작하는 클립보드 복사
 async function copyToClipboard(text: string): Promise<void> {
   // 앱인토스 환경
@@ -522,7 +532,7 @@ export default function HomeTab() {
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-gray-900">토스페이로 송금</h3>
-                  <p className="text-sm text-gray-400 mt-1">계좌번호를 복사하고<br/>토스페이 송금 화면으로 이동합니다</p>
+                  <p className="text-sm text-gray-400 mt-1">계좌번호가 복사되고<br/>토스 앱 송금 화면으로 이동합니다</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-xs text-gray-400 mb-1">계좌번호</p>
@@ -538,13 +548,19 @@ export default function HomeTab() {
                       toast.success('계좌번호가 복사되었습니다');
                       setShowTransferModal(false);
                       setTimeout(() => {
-                        window.location.href = 'supertoss://send';
+                        const { bank, accountNo } = parseAccount(savedAccount);
+                        // 토스 앱 송금 딥링크 (계좌 정보 포함)
+                        const params = new URLSearchParams();
+                        if (bank) params.set('bank', bank);
+                        if (accountNo) params.set('accountNo', accountNo.replace(/-/g, ''));
+                        const deeplink = `supertoss://send?${params.toString()}`;
+                        window.location.href = deeplink;
                       }, 300);
                     } catch {
                       toast.error('토스 앱을 열 수 없습니다.');
                     }
                   }} className="flex-[2] py-3.5 bg-blue-500 text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-lg shadow-blue-200">
-                    송금하기
+                    토스로 송금하기
                   </button>
                 </div>
               </div>
