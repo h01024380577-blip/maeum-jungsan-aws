@@ -19,3 +19,7 @@ firebase-applet-config.json
 *.pem
 *.p12
 *.pfx
+
+# 앱인토스 번들
+*.ait
+certs/
