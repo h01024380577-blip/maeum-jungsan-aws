@@ -3,30 +3,12 @@ import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
-// 앱인토스 WebView 호환 커스텀 토스트
-const toastState = { el: null as HTMLDivElement | null, timer: null as any };
-function showToast(msg: string, type: 'success' | 'error' = 'success') {
-  if (typeof document === 'undefined') return;
-  if (toastState.el) { document.body.removeChild(toastState.el); clearTimeout(toastState.timer); }
-  const el = document.createElement('div');
-  el.textContent = msg;
-  Object.assign(el.style, {
-    position: 'fixed', top: '60px', left: '50%', transform: 'translateX(-50%)',
-    padding: '12px 20px', borderRadius: '14px', fontSize: '13px', fontWeight: '600',
-    fontFamily: '-apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-    color: '#fff', background: type === 'success' ? '#22c55e' : '#ef4444',
-    zIndex: '99999', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap',
-    transition: 'opacity 0.3s', opacity: '0',
-  });
-  document.body.appendChild(el);
-  requestAnimationFrame(() => { el.style.opacity = '1'; });
-  toastState.el = el;
-  toastState.timer = setTimeout(() => {
-    el.style.opacity = '0';
-    setTimeout(() => { try { document.body.removeChild(el); } catch {} toastState.el = null; }, 300);
-  }, 2500);
-}
-const toast = { success: (m: string) => showToast(m, 'success'), error: (m: string) => showToast(m, 'error') };
+// 토스트는 useToast 훅으로 처리 (아래 컴포넌트에서 사용)
+let _toastSetter: ((t: { msg: string; type: 'success' | 'error' } | null) => void) | null = null;
+const toast = {
+  success: (m: string) => _toastSetter?.({ msg: m, type: 'success' }),
+  error: (m: string) => _toastSetter?.({ msg: m, type: 'error' }),
+};
 import { tossLogin } from '@/src/lib/tossAuth';
 
 
@@ -83,6 +65,9 @@ const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ?
 
 export default function HomeTab() {
   const { entries, addEntry, addFeedback, contacts, loadFromSupabase } = useStore();
+  const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
+  React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
   const [tossUserId, setTossUserId] = React.useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [inputUrl, setInputUrl] = useState('');
@@ -275,6 +260,20 @@ export default function HomeTab() {
 
   return (
     <div className="pb-24">
+      {/* Toast */}
+      <AnimatePresence>
+        {toastData && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-14 left-1/2 -translate-x-1/2 px-5 py-3 rounded-2xl text-white text-xs font-bold z-[9999] shadow-lg ${toastData.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+          >
+            {toastData.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="px-5 pt-14 pb-6 bg-white">
         <div className="flex items-center justify-between mb-8">
