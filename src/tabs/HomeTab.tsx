@@ -113,14 +113,15 @@ export default function HomeTab() {
         }
         if (text && text !== lastClipboardText && text.length > 10) {
           if (['결혼', '부고', '장례', '초대', '모십니다', '축하'].some(k => text.includes(k))) {
-            setLastClipboardText(text); setInputText(text); handleParse(text);
+            setLastClipboardText(text); setInputText(text);
+            // 자동 파싱 제거 - 사용자가 직접 분석 버튼을 누르도록 변경
           }
         }
       } catch {}
     };
     window.addEventListener('focus', check);
     return () => window.removeEventListener('focus', check);
-  }, [lastClipboardText, entries]);
+  }, [lastClipboardText]);
 
   const totalGiven = entries.filter(e => e.type === 'EXPENSE').reduce((s, e) => s + e.amount, 0);
   const totalReceived = entries.filter(e => e.type === 'INCOME').reduce((s, e) => s + e.amount, 0);
