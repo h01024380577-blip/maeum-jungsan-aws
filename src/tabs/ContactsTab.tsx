@@ -33,26 +33,20 @@ export default function ContactsTab() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSync = async () => {
-    // 앱인토스 환경이 아니면 안내
-    if (typeof window === 'undefined' || !window.navigator.userAgent.includes('TossApp')) {
-      alert('이 기능은 토스 앱에서만 사용할 수 있습니다.');
-      return;
-    }
-
     setIsSyncing(true);
     try {
       const { fetchContacts, FetchContactsPermissionError } = await import('@apps-in-toss/web-framework');
 
       // 권한 확인
-      const permission = await (fetchContacts as any).getPermission();
+      const permission = await fetchContacts.getPermission();
       if (permission === 'denied' || permission === 'osPermissionDenied') {
-        const result = await (fetchContacts as any).openPermissionDialog();
+        const result = await fetchContacts.openPermissionDialog();
         if (result === 'denied') {
           alert('연락처 접근 권한이 필요합니다. 설정에서 허용해 주세요.');
           return;
         }
       } else if (permission === 'notDetermined') {
-        const result = await (fetchContacts as any).openPermissionDialog();
+        const result = await fetchContacts.openPermissionDialog();
         if (result === 'denied') {
           alert('연락처 접근 권한이 필요합니다.');
           return;
@@ -65,13 +59,13 @@ export default function ContactsTab() {
       const size = 50;
 
       while (true) {
-        const res: any = await (fetchContacts as any)({ size, offset });
+        const res = await fetchContacts({ size, offset });
         const items = res.result ?? [];
         for (const item of items) {
           if (item.name) {
             allContacts.push({
               name: item.name,
-              phone: item.phoneNumbers?.[0] ?? '',
+              phone: (item as any).phoneNumbers?.[0] ?? '',
               relation: '지인',
             });
           }
@@ -89,7 +83,11 @@ export default function ContactsTab() {
       alert(`${allContacts.length}명의 연락처를 불러왔습니다.`);
     } catch (err: any) {
       console.error('연락처 불러오기 실패:', err);
-      alert('연락처를 불러오는 데 실패했습니다.');
+      if (err?.name === 'FetchContactsPermissionError') {
+        alert('연락처 접근 권한이 없습니다. 설정에서 허용해 주세요.');
+      } else {
+        alert(`연락처를 불러오는 데 실패했습니다: ${err?.message ?? ''}`);
+      }
     } finally {
       setIsSyncing(false);
     }
