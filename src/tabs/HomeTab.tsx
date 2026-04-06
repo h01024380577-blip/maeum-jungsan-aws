@@ -140,8 +140,8 @@ export default function HomeTab() {
   const handleAlbumSelect = async () => {
     if (!isAppsInToss()) { fileInputRef.current?.click(); return; }
     const { fetchAlbumPhotos } = await import('@apps-in-toss/web-framework');
-    const r: any = await (fetchAlbumPhotos as any)({ limit: 1 });
-    if (r?.photos?.[0]?.base64) { const d = `data:image/jpeg;base64,${r.photos[0].base64}`; setSelectedImage(d); handleParse({ type: 'image', data: d }); }
+    const r: any = await (fetchAlbumPhotos as any)({ maxCount: 1, base64: true });
+    if (r?.[0]?.dataUri) { const d = `data:image/jpeg;base64,${r[0].dataUri}`; setSelectedImage(d); handleParse({ type: 'image', data: d }); }
   };
 
   const handleParse = async (params?: { type: 'text' | 'url' | 'image'; data: string } | string) => {
