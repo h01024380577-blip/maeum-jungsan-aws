@@ -69,6 +69,7 @@ export default function HomeTab() {
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
   React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
   const [tossUserId, setTossUserId] = React.useState<string | null>(null);
+  const [tossUserName, setTossUserName] = React.useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [inputUrl, setInputUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -89,7 +90,9 @@ export default function HomeTab() {
 
   React.useEffect(() => {
     fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => {
-      if (d?.userId) setTossUserId(d.userId);
+      if (d?.userId) { setTossUserId(d.userId); setTossUserName(d.name ?? null); }
+      // needsRelogin: true면 세션 만료 - 버튼 표시 유지
+      if (d?.needsRelogin) { setTossUserId(null); setTossUserName(null); }
     }).catch(() => {});
   }, []);
 
@@ -288,11 +291,11 @@ export default function HomeTab() {
           <div className="flex items-center justify-between mb-4 px-1">
             <div className="flex items-center space-x-2">
               <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center"><User size={14} className="text-blue-500" /></div>
-              <span className="text-xs font-bold text-gray-600">로그인됨</span>
+              <span className="text-xs font-bold text-gray-600">{tossUserName ?? '로그인됨'}</span>
             </div>
             <button onClick={async () => {
               await fetch('/api/auth/logout', { method: 'POST' });
-              setTossUserId(null);
+              setTossUserId(null); setTossUserName(null);
             }} className="text-[11px] text-gray-400 font-medium flex items-center space-x-1 hover:text-gray-600">
               <LogOut size={12} /><span>로그아웃</span>
             </button>
@@ -300,16 +303,27 @@ export default function HomeTab() {
         ) : (
           <button onClick={async () => {
             const result = await tossLogin();
-            if (!result) return;
+            if (!result) { toast.error('로그인에 실패했습니다. 다시 시도해 주세요.'); return; }
             const res = await fetch('/api/auth/toss', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(result),
             });
             if (res.ok) {
-              const { userId } = await res.json();
-              setTossUserId(userId);
+              const data = await res.json();
+              setTossUserId(data.userId);
+              // 로그인 직후 me API로 name 가져오기
+              fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => {
+                if (d?.name) setTossUserName(d.name);
+              }).catch(() => {});
               await loadFromSupabase();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              if (err.error === 'INVALID_GRANT') {
+                toast.error('인가코드가 만료되었습니다. 다시 로그인해 주세요.');
+              } else {
+                toast.error('로그인 처리 중 오류가 발생했습니다.');
+              }
             }
           }} className="w-full mb-4 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm flex items-center justify-center space-x-2 active:scale-[0.98] transition-all">
             <span>토스로 시작하기</span>
