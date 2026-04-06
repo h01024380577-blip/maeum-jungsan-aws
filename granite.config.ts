@@ -18,5 +18,9 @@ export default defineConfig({
   webViewProps: {
     type: 'partner',
   },
-  permissions: ['CLIPBOARD', 'CAMERA', 'CONTACTS', 'NOTIFICATION'],
+  permissions: [
+    { name: 'clipboard', access: 'read' },
+    { name: 'clipboard', access: 'write' },
+    { name: 'contacts', access: 'read' },
+  ] as any,
 });
