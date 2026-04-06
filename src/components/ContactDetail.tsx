@@ -1,5 +1,5 @@
-import React from 'react';
-import { ArrowLeft, User, Heart, Flower2, Cake, Star, ArrowUpRight, ArrowDownLeft, Calendar, MapPin } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, User, Heart, Flower2, Cake, Star, ArrowUpRight, ArrowDownLeft, Calendar, MapPin, Trash2 } from 'lucide-react';
 import { useStore, EventType } from '../store/useStore';
 import { motion } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -18,7 +18,8 @@ const safeDate = (d: string) => {
 };
 
 export default function ContactDetail({ contactId, onBack }: { contactId: string; onBack: () => void }) {
-  const { contacts, entries } = useStore();
+  const { contacts, entries, removeContact } = useStore();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const contact = contacts.find(c => c.id === contactId);
   const ce = entries.filter(e => e.contactId === contactId);
 
@@ -31,10 +32,45 @@ export default function ContactDetail({ contactId, onBack }: { contactId: string
 
   return (
     <div className="space-y-5 pb-20">
-      <button onClick={onBack} className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors active:scale-95">
-        <ArrowLeft size={18} />
-        <span className="text-sm font-bold">뒤로</span>
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors active:scale-95">
+          <ArrowLeft size={18} />
+          <span className="text-sm font-bold">뒤로</span>
+        </button>
+        <button onClick={() => setShowDeleteConfirm(true)} className="p-2 text-gray-300 hover:text-red-500 transition-colors active:scale-95">
+          <Trash2 size={18} />
+        </button>
+      </div>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center px-6">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-[320px] space-y-4">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto">
+                <Trash2 size={22} className="text-red-500" />
+              </div>
+              <h3 className="text-base font-black text-gray-900">연락처 삭제</h3>
+              <p className="text-sm text-gray-400">
+                <span className="font-bold text-gray-700">{contact.name}</span>님을 삭제하시겠습니까?<br/>
+                관련 경조사 내역은 유지됩니다.
+              </p>
+            </div>
+            <div className="flex space-x-2">
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm active:scale-95 transition-all">
+                취소
+              </button>
+              <button onClick={async () => {
+                await removeContact(contactId);
+                setShowDeleteConfirm(false);
+                onBack();
+              }} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm active:scale-95 transition-all">
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Profile */}
       <div className="bg-white p-7 rounded-[28px] shadow-sm border border-gray-100 flex flex-col items-center space-y-3">

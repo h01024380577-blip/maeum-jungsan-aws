@@ -39,3 +39,12 @@ export async function PATCH(req: NextRequest) {
   await prisma.contact.updateMany({ where: { id, userId }, data: updates });
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(req: NextRequest) {
+  const userId = getUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const id = new URL(req.url).searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  await prisma.contact.deleteMany({ where: { id, userId } });
+  return NextResponse.json({ ok: true });
+}

@@ -50,6 +50,7 @@ interface AppState {
   updateEntry: (id: string, entry: Partial<EventEntry>) => Promise<void>;
   addContact: (contact: Omit<Contact, 'id' | 'userId'>) => Promise<string>;
   updateContact: (id: string, contact: Partial<Contact>) => Promise<void>;
+  removeContact: (id: string) => Promise<void>;
   syncContacts: (contacts: Omit<Contact, 'id' | 'userId'>[]) => Promise<void>;
   addFeedback: (original: any, corrected: any) => void;
   bulkAddEntries: (entries: Omit<EventEntry, 'id' | 'createdAt' | 'userId'>[]) => Promise<void>;
@@ -175,6 +176,11 @@ export const useStore = create<AppState>()((set, get) => ({
     set(state => ({
       contacts: state.contacts.map(c => c.id === id ? { ...c, ...updatedFields } : c),
     }));
+  },
+
+  removeContact: async (id) => {
+    await fetch(`/api/contacts?id=${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
+    set(state => ({ contacts: state.contacts.filter(c => c.id !== id) }));
   },
 
   syncContacts: async (newContacts) => {
