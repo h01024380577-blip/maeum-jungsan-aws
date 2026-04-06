@@ -1,74 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
-
-const TOSS_API_BASE = 'https://apps-in-toss-api.toss.im';
+import { fetchWithRetry, decryptField, parseScopes, stringifyScopes, TOSS_API_BASE } from '@/src/lib/tossApiClient';
 
 export async function POST(req: NextRequest) {
-  const { authorizationCode, referrer } = await req.json();
+  let body: { authorizationCode?: string; referrer?: string };
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const { authorizationCode, referrer } = body;
   if (!authorizationCode) {
     return NextResponse.json({ error: 'Missing authorizationCode' }, { status: 400 });
   }
 
-  // Step 1: 토큰 발급
-  const tokenRes = await fetch(
-    `${TOSS_API_BASE}/api-partner/v1/apps-in-toss/user/oauth2/generate-token`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authorizationCode, referrer }),
-    }
-  );
-  const tokenData = await tokenRes.json();
-  if (!tokenData.success?.accessToken) {
-    return NextResponse.json({ error: 'Token 발급 실패', detail: tokenData }, { status: 401 });
+  // Step 1: AccessToken 발급 (인가코드 유효시간 10분)
+  let tokenData: any;
+  try {
+    const tokenRes = await fetchWithRetry(
+      `${TOSS_API_BASE}/api-partner/v1/apps-in-toss/user/oauth2/generate-token`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authorizationCode, referrer: referrer ?? 'DEFAULT' }),
+      }
+    );
+    tokenData = await tokenRes.json();
+  } catch {
+    return NextResponse.json({ error: 'NETWORK_ERROR', message: '토스 서버 연결 실패' }, { status: 503 });
   }
+
+  // invalid_grant: 인가코드 만료 또는 중복 사용
+  if (tokenData.error?.code === 'invalid_grant') {
+    return NextResponse.json({ error: 'INVALID_GRANT', message: '인가코드가 만료되었거나 이미 사용되었습니다. 다시 로그인해 주세요.' }, { status: 401 });
+  }
+  if (!tokenData.success?.accessToken) {
+    return NextResponse.json({ error: 'TOKEN_FAILED', detail: tokenData.error?.code }, { status: 401 });
+  }
+
   const { accessToken, refreshToken, expiresIn } = tokenData.success;
+  // accessToken 유효시간 1시간, 5분 여유 두고 저장
+  const tokenExpiresAt = new Date(Date.now() + ((expiresIn ?? 3600) - 300) * 1000);
 
   // Step 2: 사용자 정보 조회
-  const userRes = await fetch(
-    `${TOSS_API_BASE}/api-partner/v1/apps-in-toss/user/oauth2/login-me`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  const userData = await userRes.json();
-  if (!userData.success?.userKey) {
-    return NextResponse.json({ error: '사용자 조회 실패' }, { status: 401 });
+  let userData: any;
+  try {
+    const userRes = await fetchWithRetry(
+      `${TOSS_API_BASE}/api-partner/v1/apps-in-toss/user/oauth2/login-me`,
+      { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+    );
+    userData = await userRes.json();
+  } catch {
+    return NextResponse.json({ error: 'NETWORK_ERROR', message: '사용자 정보 조회 실패' }, { status: 503 });
   }
 
-  const { userKey, name } = userData.success;
-  const tokenExpiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
+  if (!userData.success?.userKey) {
+    return NextResponse.json({ error: 'USER_FETCH_FAILED' }, { status: 401 });
+  }
 
-  // Step 3: DB upsert (토큰 저장)
+  const { userKey, name: rawName, scope } = userData.success;
+
+  // 개인정보 복호화 (키 없으면 null - 최소 식별정보만 저장)
+  const decryptedName = decryptField(rawName);
+
+  // scope 안전 파싱 (2026-01-02부터 user_key 추가, 신규 scope도 예외 없이 처리)
+  const scopes = parseScopes(scope);
+
+  // Step 3: DB upsert
   const user = await prisma.user.upsert({
     where: { tossUserKey: String(userKey) },
     update: {
-      name: name || undefined,
+      name: decryptedName,
       accessToken,
-      refreshToken: refreshToken || undefined,
+      refreshToken: refreshToken ?? null,
       tokenExpiresAt,
+      scopes: stringifyScopes(scopes),
       updatedAt: new Date(),
     },
     create: {
       tossUserKey: String(userKey),
-      name: name || null,
+      name: decryptedName,
       accessToken,
-      refreshToken: refreshToken || null,
+      refreshToken: refreshToken ?? null,
       tokenExpiresAt,
+      scopes: stringifyScopes(scopes),
     },
     select: { id: true },
   });
 
   const res = NextResponse.json({ ok: true, userId: user.id });
-  res.cookies.set('toss_user_id', user.id, {
+  const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 14,
-  });
-  res.cookies.set('toss_user_key', String(userKey), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 14,
-  });
+    sameSite: 'lax' as const,
+    maxAge: 60 * 60 * 24 * 14, // refreshToken 유효기간 14일
+  };
+  res.cookies.set('toss_user_id', user.id, cookieOpts);
+  res.cookies.set('toss_user_key', String(userKey), cookieOpts);
   return res;
 }

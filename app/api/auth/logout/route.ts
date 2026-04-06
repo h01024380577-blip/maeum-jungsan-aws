@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
-
-const TOSS_API_BASE = 'https://apps-in-toss-api.toss.im';
+import { fetchWithRetry, TOSS_API_BASE } from '@/src/lib/tossApiClient';
 
 export async function POST(req: NextRequest) {
   const userId = req.cookies.get('toss_user_id')?.value;
   const userKey = req.cookies.get('toss_user_key')?.value;
 
-  // 토스 연결 끊기 (userKey가 있으면)
+  // 토스 연결 끊기 (remove-by-user-key)
   if (userKey) {
     try {
-      await fetch(
+      await fetchWithRetry(
         `${TOSS_API_BASE}/api-partner/v1/apps-in-toss/user/oauth2/access/remove-by-user-key`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userKey: Number(userKey) }),
-        }
+          retries: 1,
+        } as any
       );
     } catch {
-      // 연결 끊기 실패해도 로그아웃은 진행
+      // 연결 끊기 실패해도 로컬 세션은 정리
     }
   }
 

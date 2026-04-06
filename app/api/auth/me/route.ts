@@ -1,35 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
+import { fetchWithRetry, isTokenExpiringSoon, parseScopes, stringifyScopes, TOSS_API_BASE } from '@/src/lib/tossApiClient';
 
-const TOSS_API_BASE = 'https://apps-in-toss-api.toss.im';
-
-async function refreshAccessToken(userId: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { refreshToken: true } });
+async function refreshAccessToken(userId: string): Promise<{ accessToken: string } | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { refreshToken: true },
+  });
   if (!user?.refreshToken) return null;
 
-  const res = await fetch(
-    `${TOSS_API_BASE}/api-partner/v1/apps-in-toss/user/oauth2/refresh-token`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: user.refreshToken }),
-    }
-  );
-  const data = await res.json();
-  if (!data.success?.accessToken) return null;
+  let data: any;
+  try {
+    const res = await fetchWithRetry(
+      `${TOSS_API_BASE}/api-partner/v1/apps-in-toss/user/oauth2/refresh-token`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: user.refreshToken }),
+      }
+    );
+    data = await res.json();
+  } catch {
+    return null; // 네트워크 오류
+  }
+
+  if (!data.success?.accessToken) {
+    // refreshToken 만료 또는 invalid_grant → 세션 정리
+    await prisma.user.update({
+      where: { id: userId },
+      data: { accessToken: null, refreshToken: null, tokenExpiresAt: null },
+    });
+    return null;
+  }
 
   const { accessToken, refreshToken, expiresIn } = data.success;
-  const tokenExpiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
+  const tokenExpiresAt = new Date(Date.now() + ((expiresIn ?? 3600) - 300) * 1000);
 
   await prisma.user.update({
     where: { id: userId },
-    data: {
-      accessToken,
-      refreshToken: refreshToken || undefined,
-      tokenExpiresAt,
-    },
+    data: { accessToken, refreshToken: refreshToken ?? undefined, tokenExpiresAt },
   });
-  return accessToken;
+  return { accessToken };
 }
 
 export async function GET(req: NextRequest) {
@@ -38,20 +49,22 @@ export async function GET(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, tossUserKey: true, name: true, accessToken: true, tokenExpiresAt: true },
+    select: { id: true, tossUserKey: true, name: true, tokenExpiresAt: true, scopes: true },
   });
   if (!user) return NextResponse.json({ userId: null }, { status: 401 });
 
-  // 토큰 만료 확인 및 자동 갱신
-  let validToken = user.accessToken;
-  if (user.tokenExpiresAt && user.tokenExpiresAt < new Date()) {
-    validToken = await refreshAccessToken(userId);
+  // 만료 5분 전 선제 갱신
+  let needsRelogin = false;
+  if (isTokenExpiringSoon(user.tokenExpiresAt)) {
+    const refreshed = await refreshAccessToken(userId);
+    if (!refreshed) needsRelogin = true;
   }
 
   return NextResponse.json({
     userId: user.id,
     userKey: user.tossUserKey,
     name: user.name,
-    isTokenValid: !!validToken,
+    scopes: parseScopes(user.scopes),
+    needsRelogin, // true면 클라이언트에서 재로그인 유도
   });
 }

@@ -10,11 +10,11 @@ datasource db {
 model User {
   id              String    @id @default(cuid())
   tossUserKey     String?   @unique
-  name            String?
-  email           String?
+  name            String?   // 복호화된 이름 (복호화 키 없으면 null)
   accessToken     String?
   refreshToken    String?
   tokenExpiresAt  DateTime?
+  scopes          String?   // space-separated scope list
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @default(now()) @updatedAt
 
