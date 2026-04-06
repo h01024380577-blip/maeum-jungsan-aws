@@ -54,6 +54,7 @@ interface AppState {
   syncContacts: (contacts: Omit<Contact, 'id' | 'userId'>[]) => Promise<void>;
   addFeedback: (original: any, corrected: any) => void;
   bulkAddEntries: (entries: Omit<EventEntry, 'id' | 'createdAt' | 'userId'>[]) => Promise<void>;
+  clearData: () => void;
   setAnalysisResult: (result: Partial<AppState['analysisResult']>) => void;
   resetAnalysis: () => void;
 }
@@ -108,9 +109,16 @@ export const useStore = create<AppState>()((set, get) => ({
     selectedImage: null,
   },
 
-  // API Route 기반 데이터 로드 (Supabase 완전 제거)
+  // API Route 기반 데이터 로드 (로그인 상태에서만)
   loadFromSupabase: async () => {
     try {
+      // 로그인 여부 먼저 확인
+      const meRes = await fetch('/api/auth/me');
+      if (!meRes.ok) {
+        // 비로그인: 데이터 비우고 로드 완료
+        set({ entries: [], contacts: [], isLoaded: true });
+        return;
+      }
       const [entriesRes, contactsRes] = await Promise.all([
         fetch('/api/entries', { headers: await getAuthHeaders() }).then(r => r.ok ? r.json() : { entries: [] }),
         fetch('/api/contacts', { headers: await getAuthHeaders() }).then(r => r.ok ? r.json() : { contacts: [] }),
@@ -204,6 +212,9 @@ export const useStore = create<AppState>()((set, get) => ({
     set(state => ({
       feedback: [...state.feedback, { original, corrected, timestamp: Date.now() }],
     })),
+
+  clearData: () =>
+    set({ entries: [], contacts: [], feedback: [], isLoaded: true }),
 
   setAnalysisResult: (result) =>
     set(state => ({

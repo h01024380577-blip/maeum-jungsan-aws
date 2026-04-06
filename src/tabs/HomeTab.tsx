@@ -64,7 +64,7 @@ const eventIcon = (t: string, size = 14) => {
 const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ? '부고' : t === 'birthday' ? '생일' : '기타';
 
 export default function HomeTab() {
-  const { entries, addEntry, addFeedback, contacts, loadFromSupabase } = useStore();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, clearData } = useStore();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
   React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
@@ -296,6 +296,7 @@ export default function HomeTab() {
             <button onClick={async () => {
               await fetch('/api/auth/logout', { method: 'POST' });
               setTossUserId(null); setTossUserName(null);
+              clearData();
             }} className="text-[11px] text-gray-400 font-medium flex items-center space-x-1 hover:text-gray-600">
               <LogOut size={12} /><span>로그아웃</span>
             </button>
