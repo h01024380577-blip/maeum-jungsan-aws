@@ -47,18 +47,20 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const result = await prisma.$transaction(async (tx: any) => {
     // userId가 User 테이블에 없으면 자동 생성 (비로그인 게스트)
-    await tx.user.upsert({
-      where: { id: userId },
+    const user = await tx.user.upsert({
+      where: { tossUserKey: userId },
       update: {},
-      create: { id: userId, tossUserKey: userId },
+      create: { tossUserKey: userId },
+      select: { id: true },
     });
+    const realUserId = user.id;
     let contactId = body.contactId || null;
     if (!contactId && body.targetName) {
-      const existing = await tx.contact.findFirst({ where: { userId, name: body.targetName } });
-      contactId = existing ? existing.id : (await tx.contact.create({ data: { userId, name: body.targetName, relation: body.relation || '지인' } })).id;
+      const existing = await tx.contact.findFirst({ where: { userId: realUserId, name: body.targetName } });
+      contactId = existing ? existing.id : (await tx.contact.create({ data: { userId: realUserId, name: body.targetName, relation: body.relation || '지인' } })).id;
     }
-    const event = await tx.event.create({ data: { userId, contactId, eventType: body.eventType.toUpperCase(), targetName: body.targetName, date: new Date(body.date), location: body.location ?? '', relation: body.relation ?? '', memo: body.memo ?? '', account: body.account ?? '', customEventName: body.customEventName ?? null } });
-    const transaction = await tx.transaction.create({ data: { eventId: event.id, userId, type: body.type ?? 'EXPENSE', amount: Number(body.amount) || 0, account: body.account ?? '', relation: body.relation ?? '', recommendationReason: body.recommendationReason ?? '' } });
+    const event = await tx.event.create({ data: { userId: realUserId, contactId, eventType: body.eventType.toUpperCase(), targetName: body.targetName, date: new Date(body.date), location: body.location ?? '', relation: body.relation ?? '', memo: body.memo ?? '', account: body.account ?? '', customEventName: body.customEventName ?? null } });
+    const transaction = await tx.transaction.create({ data: { eventId: event.id, userId: realUserId, type: body.type ?? 'EXPENSE', amount: Number(body.amount) || 0, account: body.account ?? '', relation: body.relation ?? '', recommendationReason: body.recommendationReason ?? '' } });
     return { event, transaction };
   });
   return NextResponse.json({ entry: toEventEntry(result.event, result.transaction) });
