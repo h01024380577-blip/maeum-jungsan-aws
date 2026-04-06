@@ -195,7 +195,14 @@ export default function HomeTab() {
       }
       amt = Math.round(amt / 10000) * 10000;
 
-      const finalData = { ...parsed, date: parsed.date || format(new Date(), 'yyyy-MM-dd'), amount: parsed.amount || amt, recommendationReason: reason, type: parsed.type || 'EXPENSE', isIncome: parsed.type === 'INCOME', relation: parsed.relation || '친구' };
+      const rawDate = parsed.date || format(new Date(), 'yyyy-MM-dd');
+      // 날짜를 yyyy-MM-dd 형식으로 정규화
+      let normalizedDate = rawDate;
+      try {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) normalizedDate = format(d, 'yyyy-MM-dd');
+      } catch {}
+      const finalData = { ...parsed, date: normalizedDate, amount: parsed.amount || amt, recommendationReason: reason, type: parsed.type || 'EXPENSE', isIncome: parsed.type === 'INCOME', relation: parsed.relation || '친구' };
       setParsedData(finalData); setInitialParsedData(finalData); setShowBottomSheet(true);
     } catch (err: any) {
       toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`);
@@ -466,7 +473,7 @@ export default function HomeTab() {
                 </div>
 
                 <Field label="이름" type="contact" value={parsedData.targetName} ai={!!initialParsedData?.targetName} onChange={(v: string, cid?: string) => setParsedData({...parsedData, targetName: v, contactId: cid})} contacts={contacts} />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 min-w-0">
                   <Field label="날짜" type="date" value={parsedData.date} ai={!!initialParsedData?.date} onChange={(v: string) => setParsedData({...parsedData, date: v})} />
                   <Field label="종류" type="select" value={parsedData.eventType} ai={!!initialParsedData?.eventType} options={['wedding', 'funeral', 'birthday', 'other']} onChange={(v: string) => setParsedData({...parsedData, eventType: v as EventType})} />
                 </div>
@@ -748,6 +755,8 @@ function Field({ label, value, onChange, type = 'text', options = [], ai = false
             </div>
           )}
         </div>
+      ) : type === 'date' ? (
+        <input type="date" value={value || ''} placeholder="yyyy-MM-dd" onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 appearance-none min-w-0 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
       ) : (
         <input type={type} value={value || ''} placeholder={placeholder} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
       )}
