@@ -38,7 +38,7 @@ export default function ContactsTab() {
       const { fetchContacts, FetchContactsPermissionError } = await import('@apps-in-toss/web-framework');
 
       // 권한 확인
-      const permission = await fetchContacts.getPermission();
+      const permission = await fetchContacts.getPermission() as string;
       if (permission === 'denied' || permission === 'osPermissionDenied') {
         const result = await fetchContacts.openPermissionDialog();
         if (result === 'denied') {
