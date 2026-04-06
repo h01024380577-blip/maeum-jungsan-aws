@@ -30,13 +30,69 @@ export default function ContactsTab() {
       return getRecent(b.id) - getRecent(a.id);
     });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const handleSync = async () => {
-    await syncContacts([
-      { name: '김철수', phone: '010-1234-5678', relation: '친구' },
-      { name: '이영희', phone: '010-8765-4321', relation: '직장 동료' },
-      { name: '박지민', phone: '010-1111-2222', relation: '절친' },
-      { name: '최유진', phone: '010-3333-4444', relation: '가족' },
-    ]);
+    // 앱인토스 환경이 아니면 안내
+    if (typeof window === 'undefined' || !window.navigator.userAgent.includes('TossApp')) {
+      alert('이 기능은 토스 앱에서만 사용할 수 있습니다.');
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const { fetchContacts, FetchContactsPermissionError } = await import('@apps-in-toss/web-framework');
+
+      // 권한 확인
+      const permission = await (fetchContacts as any).getPermission();
+      if (permission === 'denied' || permission === 'osPermissionDenied') {
+        const result = await (fetchContacts as any).openPermissionDialog();
+        if (result === 'denied') {
+          alert('연락처 접근 권한이 필요합니다. 설정에서 허용해 주세요.');
+          return;
+        }
+      } else if (permission === 'notDetermined') {
+        const result = await (fetchContacts as any).openPermissionDialog();
+        if (result === 'denied') {
+          alert('연락처 접근 권한이 필요합니다.');
+          return;
+        }
+      }
+
+      // 연락처 전체 가져오기 (페이지네이션)
+      const allContacts: { name: string; phone: string; relation: string }[] = [];
+      let offset = 0;
+      const size = 50;
+
+      while (true) {
+        const res: any = await (fetchContacts as any)({ size, offset });
+        const items = res.result ?? [];
+        for (const item of items) {
+          if (item.name) {
+            allContacts.push({
+              name: item.name,
+              phone: item.phoneNumbers?.[0] ?? '',
+              relation: '지인',
+            });
+          }
+        }
+        if (res.done || res.nextOffset == null) break;
+        offset = res.nextOffset;
+      }
+
+      if (allContacts.length === 0) {
+        alert('가져올 연락처가 없습니다.');
+        return;
+      }
+
+      await syncContacts(allContacts);
+      alert(`${allContacts.length}명의 연락처를 불러왔습니다.`);
+    } catch (err: any) {
+      console.error('연락처 불러오기 실패:', err);
+      alert('연락처를 불러오는 데 실패했습니다.');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   if (selectedContactId) {
@@ -55,8 +111,8 @@ export default function ContactsTab() {
             <h1 className="text-[22px] font-black text-gray-900 tracking-tight">인맥 관리</h1>
             <p className="text-xs text-gray-400 mt-0.5">{contacts.length}명의 연락처</p>
           </div>
-          <button onClick={handleSync} className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-100 transition-colors active:scale-95">
-            <UserPlus size={18} />
+          <button onClick={handleSync} disabled={isSyncing} className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-100 transition-colors active:scale-95 disabled:opacity-50">
+            {isSyncing ? <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : <UserPlus size={18} />}
           </button>
         </div>
       </div>
