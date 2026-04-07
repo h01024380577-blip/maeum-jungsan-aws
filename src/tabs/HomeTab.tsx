@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, LogIn, LogOut, User, Copy, HelpCircle, MessageSquare, Info } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -9,7 +9,6 @@ const toast = {
   success: (m: string) => _toastSetter?.({ msg: m, type: 'success' }),
   error: (m: string) => _toastSetter?.({ msg: m, type: 'error' }),
 };
-import { tossLogin } from '@/src/lib/tossAuth';
 
 
 
@@ -64,17 +63,15 @@ const eventIcon = (t: string, size = 14) => {
 const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ? '부고' : t === 'birthday' ? '생일' : '기타';
 
 export default function HomeTab() {
-  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, clearData } = useStore();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled } = useStore();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
   React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
-  const [tossUserId, setTossUserId] = React.useState<string | null>(null);
-  const [tossUserName, setTossUserName] = React.useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [inputUrl, setInputUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
-  const [notificationStatus, setNotificationStatus] = useState<NotificationPermission | 'unsupported'>('default');
+  const [notificationLoading, setNotificationLoading] = useState(false);
   const [parsedData, setParsedData] = useState<Partial<EventEntry> | null>(null);
   const [initialParsedData, setInitialParsedData] = useState<Partial<EventEntry> | null>(null);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
@@ -88,27 +85,28 @@ export default function HomeTab() {
   const [lastClipboardText, setLastClipboardText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
-    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => {
-      if (d?.userId) { setTossUserId(d.userId); setTossUserName(d.name ?? null); }
-      // needsRelogin: true면 세션 만료 - 버튼 표시 유지
-      if (d?.needsRelogin) { setTossUserId(null); setTossUserName(null); }
-    }).catch(() => {});
-  }, []);
 
-  const checkStatus = () => {
-    if (!('Notification' in window)) setNotificationStatus('unsupported');
-    else setNotificationStatus(Notification.permission);
-  };
-
-  React.useEffect(() => { checkStatus(); window.addEventListener('focus', checkStatus); return () => window.removeEventListener('focus', checkStatus); }, []);
-
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) { alert('알림 미지원 브라우저'); return; }
-    const p = Notification.permission;
-    if (p === 'denied') { alert('브라우저 설정에서 알림을 허용해 주세요.'); return; }
-    if (p === 'granted') { alert('이미 허용됨!'); return; }
-    try { const r = await Notification.requestPermission(); setNotificationStatus(r); } catch {}
+  const toggleNotification = async () => {
+    if (!tossUserId) { toast.error('토스 로그인 후 이용할 수 있어요.'); return; }
+    setNotificationLoading(true);
+    try {
+      const next = !notificationsEnabled;
+      const res = await fetch('/api/notification-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: next }),
+      });
+      if (res.ok) {
+        setNotificationsEnabled(next);
+        toast.success(next ? '알림이 허용되었습니다.' : '알림이 해제되었습니다.');
+      } else {
+        toast.error('설정 변경에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    } finally {
+      setNotificationLoading(false);
+    }
   };
 
   React.useEffect(() => {
@@ -228,9 +226,6 @@ export default function HomeTab() {
     setParsedData(d); setInitialParsedData(null); setShowBottomSheet(true);
   };
 
-  const sendTestPush = async () => {
-    try { const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if (!sub) { alert('알림 권한을 먼저 허용해 주세요.'); return; } await fetch('/api/test-push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub }) }); } catch { alert('실패'); }
-  };
 
   const handleSave = async (fd: any) => {
     if (initialParsedData && JSON.stringify(initialParsedData) !== JSON.stringify(fd)) addFeedback(initialParsedData, fd);
@@ -287,48 +282,11 @@ export default function HomeTab() {
         </div>
 
         {/* 로그인 상태 */}
-        {tossUserId ? (
-          <div className="flex items-center justify-between mb-4 px-1">
-            <div className="flex items-center space-x-2">
-              <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center"><User size={14} className="text-blue-500" /></div>
-              <span className="text-xs font-bold text-gray-600">{tossUserName ?? '로그인됨'}</span>
-            </div>
-            <button onClick={async () => {
-              await fetch('/api/auth/logout', { method: 'POST' });
-              setTossUserId(null); setTossUserName(null);
-              clearData();
-            }} className="text-[11px] text-gray-400 font-medium flex items-center space-x-1 hover:text-gray-600">
-              <LogOut size={12} /><span>로그아웃</span>
-            </button>
+        {tossUserId && (
+          <div className="flex items-center space-x-2 mb-4 px-1">
+            <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center"><User size={14} className="text-blue-500" /></div>
+            <span className="text-xs font-bold text-gray-600">{tossUserName ?? '로그인됨'}</span>
           </div>
-        ) : (
-          <button onClick={async () => {
-            const result = await tossLogin();
-            if (!result) { toast.error('로그인에 실패했습니다. 다시 시도해 주세요.'); return; }
-            const res = await fetch('/api/auth/toss', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(result),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              setTossUserId(data.userId);
-              // 로그인 직후 me API로 name 가져오기
-              fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => {
-                if (d?.name) setTossUserName(d.name);
-              }).catch(() => {});
-              await loadFromSupabase();
-            } else {
-              const err = await res.json().catch(() => ({}));
-              if (err.error === 'INVALID_GRANT') {
-                toast.error('인가코드가 만료되었습니다. 다시 로그인해 주세요.');
-              } else {
-                toast.error('로그인 처리 중 오류가 발생했습니다.');
-              }
-            }
-          }} className="w-full mb-4 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm flex items-center justify-center space-x-2 active:scale-[0.98] transition-all">
-            <span>토스로 시작하기</span>
-          </button>
         )}
 
         {/* Hero Title */}
@@ -632,17 +590,18 @@ export default function HomeTab() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                        <Bell size={16} className={notificationStatus === 'granted' ? 'text-green-500' : notificationStatus === 'denied' ? 'text-red-400' : 'text-gray-400'} />
+                        <Bell size={16} className={notificationsEnabled ? 'text-green-500' : 'text-gray-400'} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-gray-800">알림 설정</p>
-                        <p className="text-[11px] text-gray-400">
-                          {notificationStatus === 'granted' ? '알림 허용됨' : notificationStatus === 'denied' ? '알림 차단됨' : notificationStatus === 'unsupported' ? '미지원 브라우저' : '알림 미설정'}
-                        </p>
+                        <p className="text-sm font-bold text-gray-800">푸시알림 설정</p>
                       </div>
                     </div>
-                    <button onClick={requestNotificationPermission} className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-bold active:scale-95 transition-all">
-                      {notificationStatus === 'granted' ? '설정됨' : '허용하기'}
+                    <button
+                      onClick={toggleNotification}
+                      disabled={notificationLoading || !tossUserId || notificationsEnabled === null}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!tossUserId || notificationsEnabled === null ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : notificationsEnabled ? 'bg-green-100 text-green-700 active:scale-95' : 'bg-blue-500 text-white active:scale-95'}`}
+                    >
+                      {notificationLoading ? '...' : notificationsEnabled ? '허용됨' : '허용하기'}
                     </button>
                   </div>
                 </div>
@@ -689,71 +648,21 @@ export default function HomeTab() {
                         <p className="text-[11px] text-gray-400">불편한 점이나 개선 아이디어를 알려주세요</p>
                       </div>
                     </div>
-                    <a href="mailto:feedback@maeum-jungsan.com" className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold active:scale-95 transition-all">
-                      보내기
-                    </a>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText('feedback@maeum-jungsan.com').then(() => {
+                          toast.success('이메일 주소가 복사되었습니다');
+                        }).catch(() => {
+                          toast.info('feedback@maeum-jungsan.com');
+                        });
+                      }}
+                      className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold active:scale-95 transition-all"
+                    >
+                      복사
+                    </button>
                   </div>
                 </div>
 
-                {/* 테스트 메시지 발송 */}
-                <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                      <Send size={16} className="text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">테스트 메시지 발송</p>
-                      <p className="text-[11px] text-gray-400">앱인토스 콘솔에서 발급한 값을 입력하세요</p>
-                    </div>
-                  </div>
-                  <input
-                    type="text"
-                    value={testMsgCode}
-                    onChange={(e) => setTestMsgCode(e.target.value)}
-                    placeholder="templateSetCode"
-                    className="w-full px-3 py-2.5 bg-white rounded-xl text-xs font-medium outline-none border border-gray-200 placeholder:text-gray-300"
-                  />
-                  <input
-                    type="text"
-                    value={testMsgDeployId}
-                    onChange={(e) => setTestMsgDeployId(e.target.value)}
-                    placeholder="deploymentId (UUID)"
-                    className="w-full px-3 py-2.5 bg-white rounded-xl text-xs font-medium outline-none border border-gray-200 placeholder:text-gray-300"
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!testMsgCode.trim() || !testMsgDeployId.trim()) {
-                        toast.error('templateSetCode와 deploymentId를 입력해 주세요.');
-                        return;
-                      }
-                      setIsSendingTestMsg(true);
-                      try {
-                        const res = await fetch('/api/test-message', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ templateSetCode: testMsgCode, deploymentId: testMsgDeployId }),
-                        });
-                        const data = await res.json();
-                        if (!res.ok) {
-                          toast.error(`발송 실패: ${data.error || '알 수 없는 오류'}`);
-                        } else {
-                          toast.success('테스트 메시지가 발송됐습니다.');
-                        }
-                      } catch {
-                        toast.error('네트워크 오류가 발생했습니다.');
-                      } finally {
-                        setIsSendingTestMsg(false);
-                      }
-                    }}
-                    disabled={isSendingTestMsg || !testMsgCode.trim() || !testMsgDeployId.trim()}
-                    className="w-full py-2.5 bg-blue-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-all disabled:bg-gray-200 disabled:text-gray-400 flex items-center justify-center space-x-1.5"
-                  >
-                    {isSendingTestMsg
-                      ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      : <><Send size={12} /><span>테스트 메시지 발송</span></>
-                    }
-                  </button>
-                </div>
 
                 {/* 버전 정보 */}
                 <div className="bg-gray-50 rounded-2xl p-4">

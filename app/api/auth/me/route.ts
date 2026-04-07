@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, tossUserKey: true, name: true, tokenExpiresAt: true, scopes: true },
+    select: { id: true, tossUserKey: true, name: true, tokenExpiresAt: true, scopes: true, notificationsEnabled: true },
   });
   if (!user) return NextResponse.json({ userId: null }, { status: 401 });
 
@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
     userKey: user.tossUserKey,
     name: user.name,
     scopes: parseScopes(user.scopes),
+    notificationsEnabled: user.notificationsEnabled,
     needsRelogin, // true면 클라이언트에서 재로그인 유도
   });
 }

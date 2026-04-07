@@ -14,9 +14,10 @@ model User {
   accessToken     String?
   refreshToken    String?
   tokenExpiresAt  DateTime?
-  scopes          String?   // space-separated scope list
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt
+  scopes               String?   // space-separated scope list
+  notificationsEnabled Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @default(now()) @updatedAt
 
   contacts     Contact[]
   events       Event[]

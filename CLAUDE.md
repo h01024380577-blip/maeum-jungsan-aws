@@ -16,12 +16,13 @@ Key features: AI-powered invitation URL parsing (Gemini 2.5 Flash), CSV bulk imp
 - **Lint:** `npm run lint`
 - **Tests:** `npx vitest run` (or `npx vitest` for watch mode)
 - **Run a single test file:** `npx vitest run src/lib/parseUrl.test.ts`
+- **After `npm install`:** `prisma generate` runs automatically via `postinstall`
 
 ## Architecture
 
 ### Platform: Apps-in-Toss (`@apps-in-toss/web-framework`)
 
-This is **not** a standard Next.js or Vercel app. It's a Toss mini-app configured in `granite.config.ts`. The `granite` CLI wraps Next.js dev/build. The app requests permissions: `CLIPBOARD`, `CAMERA`, `CONTACTS`, `NOTIFICATION`.
+This is **not** a standard Next.js or Vercel app. It's a Toss mini-app configured in `granite.config.ts`. The `granite` CLI wraps Next.js dev/build. The app requests permissions: `CLIPBOARD` (read/write), `CONTACTS` (read).
 
 ### Authentication
 
@@ -62,6 +63,7 @@ Next.js App Router. All tab pages are client components (`'use client'`):
 - `app/contacts/page.tsx` → `src/tabs/ContactsTab.tsx`
 - `app/stats/page.tsx` → `src/tabs/StatisticsTab.tsx`
 - `app/intro/page.tsx` — onboarding screen
+- `app/terms/page.tsx` — static terms of service page (server component, no auth required)
 
 `components/Layout.tsx` — mobile-first shell (430px max-width) with bottom tab navigation.
 
@@ -79,7 +81,7 @@ All in `app/api/`:
 
 3-phase fallback pipeline for extracting event data from Korean invitation URLs:
 
-1. **Phase 1 (og + body):** Server fetches HTML → `cheerio` extracts og metatags + body text → Gemini 2.5 Flash analyzes
+1. **Phase 1 (og + body):** Server fetches HTML → `cheerio` extracts og metatags + body text → Gemini 2.5 Flash analyzes via `@google/genai` SDK
 2. **Phase 2 (Jina Reader):** `r.jina.ai/{url}` fetches JS-rendered text for SPAs → Gemini analyzes
 3. **Phase 3 (urlContext):** Gemini's native URL fetch tool as last resort
 
@@ -94,6 +96,29 @@ Vitest (`vitest.config.ts`). Path alias `@` → project root. Test files live al
 - `src/lib/fetchPage.test.ts` — 7 tests
 - `src/lib/events.test.ts` — 9 tests for Prisma event helpers
 - `src/hooks/useEvents.test.ts`
+
+### Key Source Files
+
+Beyond the API routes and tab pages, notable files in `src/`:
+- `src/lib/tossPayFetch.ts` — Toss Pay API fetch helpers
+- `src/lib/events.ts` — Prisma event helper functions (used by `/api/events`)
+- `src/hooks/useEvents.ts` — React hook wrapping event CRUD
+- `src/utils/csvParser.ts` — CSV parsing for bulk import (uses `papaparse`)
+- `src/utils/nanoBananaDocs.ts` — internal documentation/utility
+- `src/components/BulkImportModal.tsx` — CSV bulk import UI
+- `src/components/ContactDetail.tsx` — contact detail view
+
+### Key Dependencies
+
+- `@google/genai` v1.x — Google GenAI SDK (used in `app/api/parse-url/` and `app/api/analyze/`; note: this is the new SDK, not `@google/generative-ai`)
+- `cheerio` — HTML parsing for Phase 1 of the URL pipeline (og tags + body text extraction)
+- `@toss/tds-mobile` — Toss Design System mobile components
+- `sonner` — toast notification library
+- `recharts` — charts used in `StatisticsTab`
+- `papaparse` — CSV parsing
+- `swr` — client-side data fetching
+- `react-calendar` — calendar component in `CalendarTab`
+- `framer-motion` / `motion` — animations
 
 ### Environment Variables
 
@@ -112,3 +137,4 @@ UI is entirely in Korean. All user-facing strings, labels, and AI prompts are Ko
 - Prisma 6 is pinned — do not upgrade to Prisma 7 (Vercel serverless module resolution bug)
 - `Gemini urlContext` tool is incompatible with `responseMimeType: 'application/json'` — Phase 3 omits the MIME type
 - `prisma db push` will drop `entries`/`contacts` Supabase tables if they exist alongside — use `prisma migrate` carefully
+- Build output goes to `dist/` (not `.next/`) — configured via `distDir: 'dist'` in `next.config.ts`

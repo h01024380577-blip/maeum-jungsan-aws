@@ -37,6 +37,9 @@ interface AppState {
   contacts: Contact[];
   feedback: any[];
   isLoaded: boolean;
+  tossUserId: string | null;
+  tossUserName: string | null;
+  notificationsEnabled: boolean;
   analysisResult: {
     data: Partial<EventEntry> | null;
     initialData: Partial<EventEntry> | null;
@@ -55,6 +58,7 @@ interface AppState {
   addFeedback: (original: any, corrected: any) => void;
   bulkAddEntries: (entries: Omit<EventEntry, 'id' | 'createdAt' | 'userId'>[]) => Promise<void>;
   clearData: () => void;
+  setNotificationsEnabled: (enabled: boolean) => void;
   setAnalysisResult: (result: Partial<AppState['analysisResult']>) => void;
   resetAnalysis: () => void;
 }
@@ -101,6 +105,9 @@ export const useStore = create<AppState>()((set, get) => ({
   contacts: [],
   feedback: [],
   isLoaded: false,
+  tossUserId: null,
+  tossUserName: null,
+  notificationsEnabled: false,
   analysisResult: {
     data: null,
     initialData: null,
@@ -116,9 +123,19 @@ export const useStore = create<AppState>()((set, get) => ({
       const meRes = await fetch('/api/auth/me');
       if (!meRes.ok) {
         // 비로그인: 데이터 비우고 로드 완료
-        set({ entries: [], contacts: [], isLoaded: true });
+        set({ entries: [], contacts: [], tossUserId: null, tossUserName: null, notificationsEnabled: false, isLoaded: true });
         return;
       }
+      const me = await meRes.json();
+      if (me.needsRelogin) {
+        set({ entries: [], contacts: [], tossUserId: null, tossUserName: null, notificationsEnabled: false, isLoaded: true });
+        return;
+      }
+      set({
+        tossUserId: me.userId ?? null,
+        tossUserName: me.name ?? null,
+        notificationsEnabled: me.notificationsEnabled ?? false,
+      });
       const [entriesRes, contactsRes] = await Promise.all([
         fetch('/api/entries', { headers: await getAuthHeaders() }).then(r => r.ok ? r.json() : { entries: [] }),
         fetch('/api/contacts', { headers: await getAuthHeaders() }).then(r => r.ok ? r.json() : { contacts: [] }),
@@ -214,7 +231,10 @@ export const useStore = create<AppState>()((set, get) => ({
     })),
 
   clearData: () =>
-    set({ entries: [], contacts: [], feedback: [], isLoaded: true }),
+    set({ entries: [], contacts: [], feedback: [], tossUserId: null, tossUserName: null, notificationsEnabled: false, isLoaded: true }),
+
+  setNotificationsEnabled: (enabled: boolean) =>
+    set({ notificationsEnabled: enabled }),
 
   setAnalysisResult: (result) =>
     set(state => ({

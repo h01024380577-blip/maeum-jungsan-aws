@@ -24,6 +24,16 @@ export default function HistoryTab() {
   const [filter, setFilter] = useState<'all' | 'given' | 'received'>('all');
   const [importOpen, setImportOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    await removeEntry(deleteTarget.id);
+    setIsDeleting(false);
+    setDeleteTarget(null);
+  };
 
   const filtered = entries.filter(e => {
     const s = search.toLowerCase();
@@ -97,8 +107,8 @@ export default function HistoryTab() {
                   </p>
                   <p className="text-[9px] text-gray-300 font-medium">{e.relation}</p>
                 </div>
-                <button onClick={() => removeEntry(e.id)} className="p-1.5 text-gray-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                  <Trash2 size={14} />
+                <button onClick={() => setDeleteTarget({ id: e.id, name: e.targetName })} className="p-1.5 text-gray-300 active:text-red-500 transition-colors">
+                  <Trash2 size={15} />
                 </button>
               </div>
             </div>
@@ -109,6 +119,27 @@ export default function HistoryTab() {
           )}
         </div>
       </div>
+
+      {/* 삭제 확인 다이얼로그 */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/40 z-[200] flex items-end justify-center" onClick={() => !isDeleting && setDeleteTarget(null)}>
+          <div className="bg-white rounded-t-3xl w-full max-w-[430px] p-6 pb-10 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-2" />
+            <div className="text-center space-y-1">
+              <p className="text-base font-bold text-gray-900">내역을 삭제할까요?</p>
+              <p className="text-sm text-gray-400"><span className="text-gray-700 font-semibold">{deleteTarget.name}</span> 내역이 영구적으로 삭제됩니다.</p>
+            </div>
+            <div className="flex space-x-2 pt-1">
+              <button onClick={() => setDeleteTarget(null)} disabled={isDeleting} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all">
+                취소
+              </button>
+              <button onClick={handleDeleteConfirm} disabled={isDeleting} className="flex-1 py-3.5 bg-red-500 text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-60">
+                {isDeleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedContactId && (
         <div className="fixed inset-0 bg-white z-[100] overflow-y-auto">
