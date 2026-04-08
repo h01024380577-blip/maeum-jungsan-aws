@@ -8,12 +8,14 @@ const ALLOWED_ORIGINS = [
 ];
 
 export function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  // AIT WebView에서는 origin이 null이거나 ALLOWED_ORIGINS에 없는 내부 스킴일 수 있음
+  // origin이 없거나 허용 목록에 없으면 '*'로 허용 (credentials 미사용 시)
+  const isAllowed = origin && ALLOWED_ORIGINS.includes(origin);
   return {
-    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Origin': isAllowed ? origin : '*',
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id',
-    'Access-Control-Allow-Credentials': 'true',
+    ...(isAllowed ? { 'Access-Control-Allow-Credentials': 'true' } : {}),
     'Access-Control-Max-Age': '86400',
   };
 }
