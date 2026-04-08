@@ -123,26 +123,25 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
                 className="absolute inset-0 bg-black/40 z-[200]"
               />
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] max-w-[300px] bg-white rounded-3xl p-6 z-[210] shadow-2xl"
+                initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[78%] max-w-[280px] bg-white rounded-2xl overflow-hidden z-[210] shadow-2xl"
               >
-                <div className="text-center space-y-3">
-                  <p className="text-base font-black text-gray-900">앱을 종료할까요?</p>
-                  <p className="text-sm text-gray-400">마음정산을 종료합니다.</p>
-                  <div className="flex space-x-2 pt-2">
-                    <button
-                      onClick={() => setShowExitConfirm(false)}
-                      className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all"
-                    >
-                      취소
-                    </button>
-                    <button
-                      onClick={handleExit}
-                      className="flex-1 py-3 bg-blue-500 text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all shadow-sm"
-                    >
-                      종료
-                    </button>
-                  </div>
+                <div className="px-6 pt-7 pb-5">
+                  <p className="text-[17px] font-bold text-gray-900 text-center">마음정산을 종료할까요?</p>
+                </div>
+                <div className="flex border-t border-gray-100 px-4 py-3 space-x-2">
+                  <button
+                    onClick={() => setShowExitConfirm(false)}
+                    className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl text-[15px] font-semibold active:scale-[0.97] transition-all"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    onClick={handleExit}
+                    className="flex-1 py-3 bg-blue-500 text-white rounded-xl text-[15px] font-semibold active:scale-[0.97] transition-all"
+                  >
+                    종료하기
+                  </button>
                 </div>
               </motion.div>
             </>
