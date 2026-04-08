@@ -70,6 +70,5 @@ export async function apiFetch(
   return fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
-    credentials: 'include', // 하위호환: 쿠키도 전송
   });
 }
