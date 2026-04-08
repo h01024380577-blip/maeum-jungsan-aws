@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useStore } from "@/src/store/useStore";
-import { tossLogin } from "@/src/lib/tossAuth";
-import { apiFetch, setAuthToken } from "@/src/lib/apiClient";
 import Onboarding from "@/src/components/Onboarding";
 
 const SKIP_ONBOARDING_PATHS = ['/terms', '/intro'];
@@ -13,30 +11,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const { loadFromSupabase, isLoaded, tossUserId } = useStore();
   const pathname = usePathname();
 
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() =>
-    typeof window !== 'undefined' && localStorage.getItem('heartbook-onboarding-seen') === 'true'
-  );
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
   useEffect(() => {
     loadFromSupabase();
   }, [loadFromSupabase]);
 
-  const handleTossLogin = useCallback(async () => {
-    const result = await tossLogin();
-    if (!result) return;
-    const res = await apiFetch('/api/auth/toss', {
-      method: 'POST',
-      body: JSON.stringify(result),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.token) setAuthToken(data.token);
-      await loadFromSupabase();
+  // 비로그인 상태면 이전 온보딩 기록 초기화
+  useEffect(() => {
+    if (isLoaded && !tossUserId) {
+      localStorage.removeItem('heartbook-onboarding-seen');
     }
-  }, [loadFromSupabase]);
+  }, [isLoaded, tossUserId]);
 
   const handleOnboardingComplete = useCallback(() => {
-    localStorage.setItem('heartbook-onboarding-seen', 'true');
     setHasSeenOnboarding(true);
   }, []);
 
@@ -57,10 +45,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <>
       {children}
       {showOnboarding && (
-        <Onboarding
-          onComplete={handleOnboardingComplete}
-          onLogin={handleTossLogin}
-        />
+        <Onboarding onComplete={handleOnboardingComplete} />
       )}
     </>
   );

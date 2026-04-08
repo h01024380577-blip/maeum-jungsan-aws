@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { apiFetch } from '@/src/lib/apiClient';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -64,7 +64,7 @@ const eventIcon = (t: string, size = 14) => {
 const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ? '부고' : t === 'birthday' ? '생일' : '기타';
 
 export default function HomeTab() {
-  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled } = useStore();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData } = useStore();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
   React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
@@ -739,6 +739,21 @@ export default function HomeTab() {
                     </div>
                   </div>
                 </div>
+
+                {/* 로그아웃 / 데이터 초기화 */}
+                <button
+                  onClick={() => {
+                    clearData();
+                    localStorage.removeItem('heartbook-onboarding-seen');
+                    setShowSettings(false);
+                  }}
+                  className="w-full bg-gray-50 rounded-2xl p-4 flex items-center space-x-3 active:scale-[0.98] transition-all"
+                >
+                  <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <LogOut size={16} className="text-red-400" />
+                  </div>
+                  <p className="text-sm font-bold text-red-500">{tossUserId ? '로그아웃' : '데이터 초기화'}</p>
+                </button>
               </div>
             </motion.div>
           </>

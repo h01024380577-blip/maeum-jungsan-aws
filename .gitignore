@@ -20,6 +20,9 @@ firebase-applet-config.json
 *.p12
 *.pfx
 
+# 빌드 아티팩트
+tsconfig.tsbuildinfo
+
 # 앱인토스 번들
 *.ait
 certs/

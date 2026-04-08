@@ -32,9 +32,9 @@ Two-tier user identity system used by all API routes:
 
 API routes in `app/api/entries/route.ts` and `app/api/contacts/route.ts` check `toss_user_id` cookie first, then `x-user-id` header. Unauthenticated requests with neither are rejected (401). Guest saves auto-upsert a `User` row.
 
-### Data Layer: Prisma 6 + PostgreSQL
+### Data Layer: Prisma 6 + PostgreSQL (Supabase)
 
-All persistent data goes through **Prisma 6** (`prisma/schema.prisma`) → PostgreSQL:
+All persistent data goes through **Prisma 6** (`prisma/schema.prisma`) → PostgreSQL (Supabase Free, `ap-southeast-2`):
 
 - `User` — identified by Toss user key or device ID (cuid primary key)
 - `Contact` — belongs to User
@@ -104,7 +104,6 @@ Beyond the API routes and tab pages, notable files in `src/`:
 - `src/lib/events.ts` — Prisma event helper functions (used by `/api/events`)
 - `src/hooks/useEvents.ts` — React hook wrapping event CRUD
 - `src/utils/csvParser.ts` — CSV parsing for bulk import (uses `papaparse`)
-- `src/utils/nanoBananaDocs.ts` — internal documentation/utility
 - `src/components/BulkImportModal.tsx` — CSV bulk import UI
 - `src/components/ContactDetail.tsx` — contact detail view
 
@@ -122,10 +121,10 @@ Beyond the API routes and tab pages, notable files in `src/`:
 
 ### Environment Variables
 
-See `.env.production.example` for the canonical list:
-- `DATABASE_URL` — PostgreSQL connection string (Prisma)
+Key variables (see `.env`):
+- `DATABASE_URL` — Supabase PostgreSQL pooled connection (port 6543, PgBouncer)
+- `DIRECT_URL` — Supabase PostgreSQL session pooler (port 5432, Prisma migrate용)
 - `GEMINI_API_KEY` — Server-only Gemini API key (never use `NEXT_PUBLIC_GEMINI_API_KEY` in production)
-- `TOSS_CLIENT_ID` / `TOSS_CLIENT_SECRET` — Toss login credentials
 - `TOSS_DECRYPT_KEY` / `TOSS_DECRYPT_AAD` — AES-256 decryption for Toss auth tokens
 
 ### Language
@@ -136,5 +135,5 @@ UI is entirely in Korean. All user-facing strings, labels, and AI prompts are Ko
 
 - Prisma 6 is pinned — do not upgrade to Prisma 7 (Vercel serverless module resolution bug)
 - `Gemini urlContext` tool is incompatible with `responseMimeType: 'application/json'` — Phase 3 omits the MIME type
-- `prisma db push` will drop `entries`/`contacts` Supabase tables if they exist alongside — use `prisma migrate` carefully
+- Supabase Direct connection DNS (`db.*.supabase.co`)가 로컬에서 안 풀릴 수 있음 — `DIRECT_URL`은 session pooler 사용
 - Build output goes to `dist/` (not `.next/`) — configured via `distDir: 'dist'` in `next.config.ts`
