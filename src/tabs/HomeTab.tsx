@@ -82,6 +82,8 @@ export default function HomeTab() {
   const [testMsgCode, setTestMsgCode] = useState('');
   const [testMsgDeployId, setTestMsgDeployId] = useState('');
   const [isSendingTestMsg, setIsSendingTestMsg] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
   const [savedAccount, setSavedAccount] = useState('');
   const [lastClipboardText, setLastClipboardText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -211,7 +213,29 @@ export default function HomeTab() {
         const d = new Date(rawDate);
         if (!isNaN(d.getTime())) normalizedDate = format(d, 'yyyy-MM-dd');
       } catch {}
-      const finalData = { ...parsed, date: normalizedDate, amount: parsed.amount || amt, recommendationReason: reason, type: parsed.type || 'EXPENSE', isIncome: parsed.type === 'INCOME', relation: parsed.relation || '친구' };
+      // 방어 코드: AI가 targetName에 "김진호, 이나은" 처럼 합쳐서 넣은 경우 자동 분리
+      let targetName = parsed.targetName || '';
+      let suggestedNames = parsed.suggestedNames || [];
+      if (targetName.includes(',') && (!Array.isArray(suggestedNames) || suggestedNames.length === 0)) {
+        const names = targetName.split(/[,，]\s*/).map((n: string) => n.trim()).filter(Boolean);
+        if (names.length >= 2) {
+          const eventType = parsed.eventType || 'other';
+          const roles = eventType === 'wedding' ? ['신랑측', '신부측'] : eventType === 'funeral' ? ['고인', '상주'] : ['주인공', '관련인'];
+          suggestedNames = names.map((n: string, i: number) => ({ name: n, label: `${roles[i] || '기타'} · ${n}` }));
+          targetName = names[0]; // 첫 번째 이름을 기본값으로
+        }
+      }
+      // 방어 코드: account에 콤마로 여러 계좌가 합쳐진 경우
+      let account = parsed.account || '';
+      let suggestedAccounts = parsed.suggestedAccounts || [];
+      if (account.includes(',') && (!Array.isArray(suggestedAccounts) || suggestedAccounts.length === 0)) {
+        const accts = account.split(/[,，]\s*/).map((a: string) => a.trim()).filter(Boolean);
+        if (accts.length >= 2) {
+          suggestedAccounts = accts.map((a: string, i: number) => ({ account: a, label: `계좌 ${i + 1} · ${a.split(' ')[0]}` }));
+          account = accts[0];
+        }
+      }
+      const finalData = { ...parsed, targetName, suggestedNames, account, suggestedAccounts, date: normalizedDate, amount: parsed.amount || amt, recommendationReason: reason, type: parsed.type || 'EXPENSE', isIncome: parsed.type === 'INCOME', relation: parsed.relation || '친구' };
       setParsedData(finalData); setInitialParsedData(finalData); setShowBottomSheet(true);
     } catch (err: any) {
       toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`);
@@ -464,7 +488,7 @@ export default function HomeTab() {
                   </button>
                 </div>
 
-                <Field label="이름" type="contact" value={parsedData.targetName} ai={!!initialParsedData?.targetName} onChange={(v: string, cid?: string) => setParsedData({...parsedData, targetName: v, contactId: cid})} contacts={contacts} />
+                <Field label="이름" type="contact" value={parsedData.targetName} ai={!!initialParsedData?.targetName} onChange={(v: string, cid?: string) => setParsedData({...parsedData, targetName: v, contactId: cid})} contacts={contacts} suggestedNames={(parsedData as any).suggestedNames || []} />
                 <div className="grid grid-cols-2 gap-2 min-w-0">
                   <Field label="날짜" type="date" value={parsedData.date} ai={!!initialParsedData?.date} onChange={(v: string) => setParsedData({...parsedData, date: v})} />
                   <Field label="종류" type="select" value={parsedData.eventType} ai={!!initialParsedData?.eventType} options={['wedding', 'funeral', 'birthday', 'other']} onChange={(v: string) => setParsedData({...parsedData, eventType: v as EventType})} />
@@ -480,7 +504,7 @@ export default function HomeTab() {
                     <span className="text-[8px] font-black text-white bg-blue-500 px-2 py-0.5 rounded-full">AI 추천</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <input type="number" step="10000" value={parsedData.amount} onChange={(e) => setParsedData({...parsedData, amount: Number(e.target.value)})} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="flex-1 bg-transparent text-2xl font-black text-blue-700 outline-none" />
+                    <input type="text" inputMode="numeric" value={parsedData.amount ? Number(parsedData.amount).toLocaleString() : ''} onChange={(e) => { const raw = e.target.value.replace(/[^0-9]/g, ''); setParsedData({...parsedData, amount: Number(raw) || 0}); }} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="flex-1 bg-transparent text-2xl font-black text-blue-700 outline-none" />
                     <span className="text-base font-bold text-blue-500">원</span>
                   </div>
                   <div className="flex space-x-1.5 sm:space-x-2 mt-3">
@@ -508,6 +532,25 @@ export default function HomeTab() {
                       </button>
                     )}
                   </div>
+                  {/* 복수 계좌 선택 칩 */}
+                  {(() => {
+                    const accts: { account: string; label: string }[] = ((parsedData as any).suggestedAccounts || [])
+                      .map((a: any) => typeof a === 'string' ? { account: a, label: a } : { account: a.account, label: a.label || a.account })
+                      .filter((a: any) => a.account);
+                    if (accts.length <= 1) return null;
+                    return (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {accts.map((a: { account: string; label: string }, i: number) => {
+                          const isSelected = a.account === parsedData.account;
+                          return (
+                            <button key={i} onClick={() => setParsedData({...parsedData, account: a.account})} className={`px-3 py-1.5 rounded-lg text-xs font-bold border active:scale-95 transition-all ${isSelected ? 'bg-blue-500 text-white border-blue-500' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'}`}>
+                              {a.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -636,30 +679,51 @@ export default function HomeTab() {
                 </div>
 
                 {/* 개발자 의견 */}
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                        <MessageSquare size={16} className="text-gray-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-800">개발자에게 의견 보내기</p>
-                        <p className="text-[11px] text-gray-400">불편한 점이나 개선 아이디어를 알려주세요</p>
-                      </div>
+                <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                      <MessageSquare size={16} className="text-gray-400" />
                     </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText('feedback@maeum-jungsan.com').then(() => {
-                          toast.success('이메일 주소가 복사되었습니다');
-                        }).catch(() => {
-                          toast.success('feedback@maeum-jungsan.com');
-                        });
-                      }}
-                      className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-bold active:scale-95 transition-all"
-                    >
-                      복사
-                    </button>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">개발자에게 의견 보내기</p>
+                      <p className="text-[11px] text-gray-400">불편한 점이나 개선 아이디어를 알려주세요</p>
+                    </div>
                   </div>
+                  <textarea
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="의견을 자유롭게 입력해 주세요..."
+                    className="w-full h-20 p-3 bg-white rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 resize-none border border-gray-100 placeholder:text-gray-300"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!feedbackText.trim()) { toast.error('내용을 입력해 주세요.'); return; }
+                      setIsSendingFeedback(true);
+                      try {
+                        const res = await apiFetch('/api/feedback', {
+                          method: 'POST',
+                          body: JSON.stringify({ message: feedbackText, userId: tossUserId || 'anonymous' }),
+                        });
+                        if (res.ok) {
+                          toast.success('소중한 의견 감사합니다!');
+                          setFeedbackText('');
+                        } else {
+                          // API 없으면 mailto 폴백
+                          window.location.href = `mailto:feedback@maeum-jungsan.com?subject=${encodeURIComponent('마음정산 의견')}&body=${encodeURIComponent(feedbackText)}`;
+                          toast.success('메일 앱이 열립니다.');
+                        }
+                      } catch {
+                        window.location.href = `mailto:feedback@maeum-jungsan.com?subject=${encodeURIComponent('마음정산 의견')}&body=${encodeURIComponent(feedbackText)}`;
+                        toast.success('메일 앱이 열립니다.');
+                      } finally {
+                        setIsSendingFeedback(false);
+                      }
+                    }}
+                    disabled={isSendingFeedback || !feedbackText.trim()}
+                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] ${!feedbackText.trim() ? 'bg-gray-200 text-gray-400' : 'bg-blue-500 text-white shadow-sm'}`}
+                  >
+                    {isSendingFeedback ? '전송 중...' : '의견 보내기'}
+                  </button>
                 </div>
 
 
@@ -684,8 +748,14 @@ export default function HomeTab() {
   );
 }
 
-function Field({ label, value, onChange, type = 'text', options = [], ai = false, contacts = [], placeholder = '' }: any) {
+function Field({ label, value, onChange, type = 'text', options = [], ai = false, contacts = [], placeholder = '', suggestedNames = [] }: any) {
   const [show, setShow] = useState(false);
+  // suggestedNames를 정규화: string | {name, label} 둘 다 지원
+  const normalizedSuggestions: { name: string; label: string }[] = suggestedNames
+    .map((s: any) => typeof s === 'string' ? { name: s, label: s } : { name: s.name, label: s.label || s.name })
+    .filter((s: any) => s.name);
+  const contactSuggestions = contacts.filter((c: any) => c.name.toLowerCase().includes((value || '').toLowerCase()));
+
   return (
     <div className="space-y-1 relative">
       <div className="flex items-center justify-between ml-0.5">
@@ -699,9 +769,22 @@ function Field({ label, value, onChange, type = 'text', options = [], ai = false
       ) : type === 'contact' ? (
         <div className="relative">
           <input type="text" value={value || ''} placeholder={placeholder} onFocus={() => setShow(true)} onBlur={() => setTimeout(() => setShow(false), 200)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
-          {show && contacts.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-50 max-h-32 overflow-y-auto">
-              {contacts.filter((c: any) => c.name.toLowerCase().includes((value || '').toLowerCase())).map((c: any) => (
+          {/* AI 제안 이름 칩 — 모두 표시, 선택된 항목 하이라이트 */}
+          {normalizedSuggestions.length > 1 && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {normalizedSuggestions.map((s: { name: string; label: string }, i: number) => {
+                const isSelected = s.name === value;
+                return (
+                  <button key={i} onClick={() => onChange(s.name)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border active:scale-95 transition-all ${isSelected ? 'bg-blue-500 text-white border-blue-500' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'}`}>
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {show && contactSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-50 max-h-40 overflow-y-auto">
+              {contactSuggestions.map((c: any) => (
                 <button key={c.id} onClick={() => onChange(c.name, c.id)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 font-medium">{c.name} <span className="text-[10px] text-gray-400 ml-1">{c.relation}</span></button>
               ))}
             </div>

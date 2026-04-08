@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useStore } from '../store/useStore';
-import { Search, Trash2, Heart, Flower2, Cake, Star, FileSpreadsheet } from 'lucide-react';
+import { useStore, EventType } from '../store/useStore';
+import { Search, Trash2, Heart, Flower2, Cake, Star, FileSpreadsheet, Pencil, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import BulkImportModal from '../components/BulkImportModal';
 import ContactDetail from '../components/ContactDetail';
@@ -19,13 +19,15 @@ const safeDate = (d: string) => {
 };
 
 export default function HistoryTab() {
-  const { entries, removeEntry, contacts } = useStore();
+  const { entries, removeEntry, updateEntry, contacts } = useStore();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'given' | 'received'>('all');
   const [importOpen, setImportOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -33,6 +35,24 @@ export default function HistoryTab() {
     await removeEntry(deleteTarget.id);
     setIsDeleting(false);
     setDeleteTarget(null);
+  };
+
+  const handleEditSave = async () => {
+    if (!editTarget) return;
+    setIsSaving(true);
+    try {
+      await updateEntry(editTarget.id, {
+        type: editTarget.type,
+        amount: Number(editTarget.amount) || 0,
+        date: editTarget.date,
+        eventType: editTarget.eventType,
+        location: editTarget.location,
+        relation: editTarget.relation,
+        memo: editTarget.memo,
+      });
+      setEditTarget(null);
+    } catch {}
+    setIsSaving(false);
   };
 
   const filtered = entries.filter(e => {
@@ -79,7 +99,7 @@ export default function HistoryTab() {
         {/* List */}
         <div className="space-y-2">
           {filtered.length > 0 ? filtered.map(e => (
-            <div key={e.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between group relative overflow-hidden">
+            <div key={e.id} onClick={() => setEditTarget({ ...e })} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between group relative overflow-hidden cursor-pointer active:scale-[0.98] transition-all">
               <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full ${e.type === 'INCOME' ? 'bg-blue-500' : 'bg-red-400'}`} />
               <div className="flex items-center space-x-3 pl-2 min-w-0 flex-1">
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${e.type === 'INCOME' ? 'bg-blue-50' : 'bg-red-50'}`}>
@@ -91,7 +111,7 @@ export default function HistoryTab() {
                       {e.type === 'INCOME' ? 'IN' : 'OUT'}
                     </span>
                     <button
-                      onClick={() => { const c = contacts.find(c => c.id === e.contactId || c.name === e.targetName); if (c) setSelectedContactId(c.id); }}
+                      onClick={(ev) => { ev.stopPropagation(); const c = contacts.find(c => c.id === e.contactId || c.name === e.targetName); if (c) setSelectedContactId(c.id); }}
                       className="text-sm font-bold text-gray-900 hover:text-blue-600 transition-colors"
                     >{e.targetName}</button>
                   </div>
@@ -107,9 +127,12 @@ export default function HistoryTab() {
                   </p>
                   <p className="text-[9px] text-gray-300 font-medium">{e.relation}</p>
                 </div>
-                <button onClick={() => setDeleteTarget({ id: e.id, name: e.targetName })} className="p-1.5 text-gray-300 active:text-red-500 transition-colors">
-                  <Trash2 size={15} />
-                </button>
+                <div className="flex items-center space-x-1">
+                  <Pencil size={13} className="text-gray-300 group-hover:text-blue-400 transition-colors" />
+                  <button onClick={(ev) => { ev.stopPropagation(); setDeleteTarget({ id: e.id, name: e.targetName }); }} className="p-1.5 text-gray-300 active:text-red-500 transition-colors">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             </div>
           )) : (
@@ -135,6 +158,80 @@ export default function HistoryTab() {
               </button>
               <button onClick={handleDeleteConfirm} disabled={isDeleting} className="flex-1 py-3.5 bg-red-500 text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-60">
                 {isDeleting ? '삭제 중...' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 수정 바텀시트 */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/40 z-[200] flex items-end justify-center" onClick={() => !isSaving && setEditTarget(null)}>
+          <div className="bg-white rounded-t-3xl w-full max-w-[430px] p-5 pb-10 space-y-3" onClick={ev => ev.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-2" />
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-black text-gray-900">내역 수정</h3>
+              <span className="text-xs text-gray-400">{editTarget.targetName}</span>
+            </div>
+
+            {/* 보냄/받음 토글 */}
+            <div className="flex bg-gray-100 p-1 rounded-xl">
+              <button onClick={() => setEditTarget({...editTarget, type: 'EXPENSE', isIncome: false})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${editTarget.type === 'EXPENSE' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400'}`}>
+                <ArrowUpRight size={12} /><span>보냄 (OUT)</span>
+              </button>
+              <button onClick={() => setEditTarget({...editTarget, type: 'INCOME', isIncome: true})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${editTarget.type === 'INCOME' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>
+                <ArrowDownLeft size={12} /><span>받음 (IN)</span>
+              </button>
+            </div>
+
+            {/* 금액 (콤마 포맷) */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">금액</label>
+              <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <input type="text" inputMode="numeric" value={editTarget.amount ? Number(editTarget.amount).toLocaleString() : ''} onChange={(e) => { const raw = e.target.value.replace(/[^0-9]/g, ''); setEditTarget({...editTarget, amount: Number(raw) || 0}); }} className="flex-1 bg-transparent text-lg font-black text-gray-900 outline-none" />
+                <span className="text-sm font-bold text-gray-400">원</span>
+              </div>
+              <div className="flex space-x-1.5 mt-1">
+                {[{ l: '-1만', d: -10000 }, { l: '+1만', d: 10000 }, { l: '+5만', d: 50000 }, { l: '+10만', d: 100000 }].map(b => (
+                  <button key={b.l} onClick={() => setEditTarget({...editTarget, amount: Math.max(0, (editTarget.amount || 0) + b.d)})} className="flex-1 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-[10px] font-bold text-gray-600 transition-colors active:scale-95">{b.l}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              {/* 날짜 */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">날짜</label>
+                <input type="date" value={editTarget.date || ''} onChange={(e) => setEditTarget({...editTarget, date: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl text-sm font-bold outline-none border border-gray-100 appearance-none min-w-0" />
+              </div>
+              {/* 종류 */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">종류</label>
+                <select value={editTarget.eventType} onChange={(e) => setEditTarget({...editTarget, eventType: e.target.value as EventType})} className="w-full p-3 bg-gray-50 rounded-xl text-sm font-bold outline-none border border-gray-100">
+                  <option value="wedding">결혼</option><option value="funeral">부고</option><option value="birthday">생일</option><option value="other">기타</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 장소 */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">장소</label>
+              <input type="text" value={editTarget.location || ''} onChange={(e) => setEditTarget({...editTarget, location: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl text-sm font-bold outline-none border border-gray-100" />
+            </div>
+
+            {/* 관계 */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">관계</label>
+              <input type="text" value={editTarget.relation || ''} onChange={(e) => setEditTarget({...editTarget, relation: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl text-sm font-bold outline-none border border-gray-100" />
+            </div>
+
+            {/* 버튼 */}
+            <div className="flex space-x-2 pt-2">
+              <button onClick={() => setDeleteTarget({ id: editTarget.id, name: editTarget.targetName })} className="px-4 py-3.5 bg-red-50 text-red-500 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all">
+                삭제
+              </button>
+              <button onClick={handleEditSave} disabled={isSaving} className="flex-1 py-3.5 bg-blue-500 text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all disabled:opacity-60 shadow-lg shadow-blue-200">
+                {isSaving ? '저장 중...' : '수정 완료'}
               </button>
             </div>
           </div>

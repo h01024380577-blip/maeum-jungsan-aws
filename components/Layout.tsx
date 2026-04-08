@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Home, Calendar as CalendarIcon, History, BarChart3, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -15,12 +15,48 @@ const tabs: { key: Tab; icon: typeof Home; label: string; path: string }[] = [
   { key: 'stats', icon: BarChart3, label: '통계', path: '/stats' },
 ];
 
+const tabPathMap: Record<string, string> = Object.fromEntries(tabs.map(t => [t.key, t.path]));
+
 function isAppsInToss(): boolean {
   return typeof window !== 'undefined' && window.navigator.userAgent.includes('TossApp');
 }
 
 export default function Layout({ children, activeTab }: { children: React.ReactNode; activeTab: Tab }) {
   const router = useRouter();
+  const tabHistoryRef = useRef<Tab[]>([]);
+
+  // 탭 히스토리 관리
+  useEffect(() => {
+    const history = tabHistoryRef.current;
+    if (history[history.length - 1] !== activeTab) {
+      history.push(activeTab);
+      // 최대 20개까지만 보관
+      if (history.length > 20) history.splice(0, history.length - 20);
+    }
+  }, [activeTab]);
+
+  // 뒤로가기 (popstate) 시 이전 탭으로 이동
+  const handlePopState = useCallback(() => {
+    const history = tabHistoryRef.current;
+    if (history.length > 1) {
+      history.pop(); // 현재 탭 제거
+      const prevTab = history[history.length - 1];
+      if (prevTab && tabPathMap[prevTab]) {
+        router.replace(tabPathMap[prevTab]);
+      }
+    }
+  }, [router]);
+
+  useEffect(() => {
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [handlePopState]);
+
+  // 탭 전환 시 history.pushState로 브라우저 히스토리에 추가
+  const navigateTab = useCallback((path: string) => {
+    window.history.pushState(null, '', path);
+    router.push(path);
+  }, [router]);
 
   useEffect(() => {
     if (!isAppsInToss()) return;
@@ -54,7 +90,7 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
               return (
                 <button
                   key={tab.key}
-                  onClick={() => router.push(tab.path)}
+                  onClick={() => navigateTab(tab.path)}
                   className="relative flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all active:scale-90"
                 >
                   {isActive && (
