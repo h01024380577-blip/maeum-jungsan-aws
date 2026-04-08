@@ -126,7 +126,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         <div className="flex justify-end h-10 items-center">
           {!isLast && (
             <button
-              onClick={onComplete}
+              onClick={() => goTo(TOTAL - 1)}
               className="text-sm text-gray-400 font-medium active:text-gray-600 transition-colors"
             >
               건너뛰기
@@ -185,21 +185,13 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         {/* Bottom buttons */}
         <div className="space-y-3 pb-4">
           {isLast ? (
-            <>
-              <button
-                onClick={handleLogin}
-                disabled={isLogging}
-                className="w-full py-4 bg-blue-500 text-white rounded-2xl font-bold text-base shadow-lg shadow-blue-200 active:scale-[0.98] transition-all disabled:opacity-60"
-              >
-                {isLogging ? "로그인 중..." : "토스로 시작하기"}
-              </button>
-              <button
-                onClick={onComplete}
-                className="w-full py-3 text-sm text-gray-400 font-medium active:text-gray-600 transition-colors"
-              >
-                나중에 할게요
-              </button>
-            </>
+            <button
+              onClick={handleLogin}
+              disabled={isLogging}
+              className="w-full py-4 bg-blue-500 text-white rounded-2xl font-bold text-base shadow-lg shadow-blue-200 active:scale-[0.98] transition-all disabled:opacity-60"
+            >
+              {isLogging ? "로그인 중..." : "토스로 시작하기"}
+            </button>
           ) : (
             <button
               onClick={handleNext}
