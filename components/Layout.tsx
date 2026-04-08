@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Home, Calendar as CalendarIcon, History, BarChart3, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type Tab = 'home' | 'calendar' | 'history' | 'stats' | 'contacts';
 
@@ -15,48 +15,47 @@ const tabs: { key: Tab; icon: typeof Home; label: string; path: string }[] = [
   { key: 'stats', icon: BarChart3, label: '통계', path: '/stats' },
 ];
 
-const tabPathMap: Record<string, string> = Object.fromEntries(tabs.map(t => [t.key, t.path]));
-
 function isAppsInToss(): boolean {
   return typeof window !== 'undefined' && window.navigator.userAgent.includes('TossApp');
 }
 
 export default function Layout({ children, activeTab }: { children: React.ReactNode; activeTab: Tab }) {
   const router = useRouter();
-  const tabHistoryRef = useRef<Tab[]>([]);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-  // 탭 히스토리 관리
+  // 뒤로가기: 다른 탭 → 홈, 홈 → 종료 확인
   useEffect(() => {
-    const history = tabHistoryRef.current;
-    if (history[history.length - 1] !== activeTab) {
-      history.push(activeTab);
-      // 최대 20개까지만 보관
-      if (history.length > 20) history.splice(0, history.length - 20);
-    }
-  }, [activeTab]);
+    // 항상 pushState를 유지해서 popstate를 잡을 수 있게
+    window.history.pushState(null, '', window.location.href);
 
-  // 뒤로가기 (popstate) 시 이전 탭으로 이동
-  const handlePopState = useCallback(() => {
-    const history = tabHistoryRef.current;
-    if (history.length > 1) {
-      history.pop(); // 현재 탭 제거
-      const prevTab = history[history.length - 1];
-      if (prevTab && tabPathMap[prevTab]) {
-        router.replace(tabPathMap[prevTab]);
+    const handlePopState = () => {
+      if (activeTab === 'home') {
+        // 홈에서 뒤로가기 → 종료 확인
+        window.history.pushState(null, '', window.location.href);
+        setShowExitConfirm(true);
+      } else {
+        // 다른 탭에서 뒤로가기 → 홈으로
+        router.replace('/');
       }
-    }
-  }, [router]);
+    };
 
-  useEffect(() => {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [handlePopState]);
+  }, [activeTab, router]);
 
-  // 탭 전환 시 history.pushState로 브라우저 히스토리에 추가
-  const navigateTab = useCallback((path: string) => {
-    window.history.pushState(null, '', path);
-    router.push(path);
-  }, [router]);
+  const handleExit = useCallback(() => {
+    if (isAppsInToss()) {
+      import('@apps-in-toss/web-framework').then((sdk: any) => {
+        sdk.closeApp?.();
+      }).catch(() => {
+        window.history.go(-(window.history.length - 1));
+      });
+    } else {
+      window.close();
+      // window.close()가 안 먹히는 경우 (직접 열린 탭이 아닌 경우)
+      window.history.go(-(window.history.length - 1));
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAppsInToss()) return;
@@ -90,7 +89,7 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
               return (
                 <button
                   key={tab.key}
-                  onClick={() => navigateTab(tab.path)}
+                  onClick={() => router.push(tab.path)}
                   className="relative flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all active:scale-90"
                 >
                   {isActive && (
@@ -113,6 +112,42 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
             })}
           </div>
         </nav>
+
+        {/* 앱 종료 확인 다이얼로그 */}
+        <AnimatePresence>
+          {showExitConfirm && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setShowExitConfirm(false)}
+                className="absolute inset-0 bg-black/40 z-[200]"
+              />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] max-w-[300px] bg-white rounded-3xl p-6 z-[210] shadow-2xl"
+              >
+                <div className="text-center space-y-3">
+                  <p className="text-base font-black text-gray-900">앱을 종료할까요?</p>
+                  <p className="text-sm text-gray-400">마음정산을 종료합니다.</p>
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      onClick={() => setShowExitConfirm(false)}
+                      className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleExit}
+                      className="flex-1 py-3 bg-blue-500 text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all shadow-sm"
+                    >
+                      종료
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
