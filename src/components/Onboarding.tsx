@@ -3,6 +3,9 @@
 import { useState, useCallback } from "react";
 import { MessageSquareText, Sparkles, BarChart3, Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useStore } from "@/src/store/useStore";
+import { tossLogin } from "@/src/lib/tossAuth";
+import { apiFetch, setAuthToken } from "@/src/lib/apiClient";
 
 const SLIDES = [
   {
@@ -42,10 +45,10 @@ const TOTAL = SLIDES.length;
 
 interface OnboardingProps {
   onComplete: () => void;
-  onLogin: () => Promise<void>;
 }
 
-export default function Onboarding({ onComplete, onLogin }: OnboardingProps) {
+export default function Onboarding({ onComplete }: OnboardingProps) {
+  const { loadFromSupabase } = useStore();
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isLogging, setIsLogging] = useState(false);
@@ -63,14 +66,27 @@ export default function Onboarding({ onComplete, onLogin }: OnboardingProps) {
     if (current < TOTAL - 1) goTo(current + 1);
   }, [current, goTo]);
 
-  const handleLogin = useCallback(async () => {
+  const handleLogin = async () => {
     setIsLogging(true);
     try {
-      await onLogin();
+      const result = await tossLogin();
+      if (!result) return;
+      const res = await apiFetch('/api/auth/toss', {
+        method: 'POST',
+        body: JSON.stringify(result),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) setAuthToken(data.token);
+        localStorage.setItem('heartbook-onboarding-seen', 'true');
+        await loadFromSupabase();
+      }
+    } catch {
+      // silent
     } finally {
       setIsLogging(false);
     }
-  }, [onLogin]);
+  };
 
   const handleDragEnd = useCallback(
     (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
