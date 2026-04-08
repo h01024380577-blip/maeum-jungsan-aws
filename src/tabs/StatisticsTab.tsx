@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
-import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Wallet } from 'lucide-react';
 
 const BLUE = ['#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#1d4ed8'];
 const RED = ['#ef4444', '#f87171', '#fca5a5', '#dc2626', '#b91c1c'];
@@ -38,19 +38,19 @@ export default function StatisticsTab() {
     <div className="pb-4">
       <div className="px-5 pt-14 pb-4 bg-white">
         <h1 className="text-[22px] font-black text-gray-900 tracking-tight">통계 리포트</h1>
-        <p className="text-xs text-gray-400 mt-0.5">경조사 수입/지출 분석</p>
+        <p className="text-xs text-gray-400 mt-0.5">경조사 받음/보냄 분석</p>
       </div>
 
       <div className="px-5 pt-4 space-y-4">
         {/* Summary */}
         <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
           <div className="bg-blue-50 rounded-2xl p-3.5 text-center">
-            <TrendingUp size={14} className="text-blue-500 mx-auto mb-1" />
+            <ArrowDownLeft size={14} className="text-blue-500 mx-auto mb-1" />
             <p className="text-[10px] font-bold text-blue-400">받음</p>
             <p className="text-base font-black text-blue-600">{(totalIncome / 10000).toFixed(0)}<span className="text-[10px] text-blue-400">만</span></p>
           </div>
           <div className="bg-red-50 rounded-2xl p-3.5 text-center">
-            <TrendingDown size={14} className="text-red-400 mx-auto mb-1" />
+            <ArrowUpRight size={14} className="text-red-400 mx-auto mb-1" />
             <p className="text-[10px] font-bold text-red-400">보냄</p>
             <p className="text-base font-black text-red-500">{(totalExpense / 10000).toFixed(0)}<span className="text-[10px] text-red-400">만</span></p>
           </div>
@@ -63,8 +63,8 @@ export default function StatisticsTab() {
 
         {/* Tab Toggle */}
         <div className="flex bg-gray-100 p-1 rounded-xl">
-          <button onClick={() => setTab('INCOME')} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${tab === 'INCOME' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>수입</button>
-          <button onClick={() => setTab('EXPENSE')} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${tab === 'EXPENSE' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400'}`}>지출</button>
+          <button onClick={() => setTab('INCOME')} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${tab === 'INCOME' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}>받음</button>
+          <button onClick={() => setTab('EXPENSE')} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${tab === 'EXPENSE' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400'}`}>보냄</button>
         </div>
 
         {filtered.length > 0 ? (

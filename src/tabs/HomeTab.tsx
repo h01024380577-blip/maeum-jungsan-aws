@@ -78,6 +78,7 @@ export default function HomeTab() {
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [testMsgCode, setTestMsgCode] = useState('');
   const [testMsgDeployId, setTestMsgDeployId] = useState('');
@@ -742,11 +743,7 @@ export default function HomeTab() {
 
                 {/* 로그아웃 / 데이터 초기화 */}
                 <button
-                  onClick={() => {
-                    clearData();
-                    localStorage.removeItem('heartbook-onboarding-seen');
-                    setShowSettings(false);
-                  }}
+                  onClick={() => setShowLogoutConfirm(true)}
                   className="w-full bg-gray-50 rounded-2xl p-4 flex items-center space-x-3 active:scale-[0.98] transition-all"
                 >
                   <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
@@ -754,6 +751,51 @@ export default function HomeTab() {
                   </div>
                   <p className="text-sm font-bold text-red-500">{tossUserId ? '로그아웃' : '데이터 초기화'}</p>
                 </button>
+
+                {/* 로그아웃 확인 모달 */}
+                <AnimatePresence>
+                  {showLogoutConfirm && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 bg-black/40 z-[600] flex items-center justify-center px-8"
+                      onClick={() => setShowLogoutConfirm(false)}
+                    >
+                      <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        className="bg-white rounded-2xl p-6 w-full max-w-[300px] shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <p className="text-[15px] font-bold text-gray-900 text-center mb-5">
+                          {tossUserId ? '로그아웃하시겠습니까?' : '데이터를 초기화하시겠습니까?'}
+                        </p>
+                        <div className="flex gap-2.5">
+                          <button
+                            onClick={() => setShowLogoutConfirm(false)}
+                            className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-500 bg-gray-100 active:scale-[0.97] transition-all"
+                          >
+                            취소
+                          </button>
+                          <button
+                            onClick={() => {
+                              clearData();
+                              localStorage.removeItem('heartbook-onboarding-seen');
+                              setShowLogoutConfirm(false);
+                              setShowSettings(false);
+                            }}
+                            className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-blue-500 shadow-sm shadow-blue-200 active:scale-[0.97] transition-all"
+                          >
+                            확인
+                          </button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </>

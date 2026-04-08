@@ -19,10 +19,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     loadFromSupabase();
   }, [loadFromSupabase]);
 
-  // 비로그인 상태면 이전 온보딩 기록 초기화
+  // 비로그인 상태면 온보딩 상태 초기화 (로그아웃 후 온보딩 재표시)
   useEffect(() => {
     if (isLoaded && !tossUserId) {
       localStorage.removeItem('heartbook-onboarding-seen');
+      setHasSeenOnboarding(false);
     }
   }, [isLoaded, tossUserId]);
 
@@ -41,7 +42,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const showOnboarding = !tossUserId && !hasSeenOnboarding && !SKIP_ONBOARDING_PATHS.includes(pathname);
+  // 비로그인이면 무조건 온보딩 표시 (로그인 강제)
+  const showOnboarding = !tossUserId && !SKIP_ONBOARDING_PATHS.includes(pathname);
 
   return (
     <>
