@@ -11,7 +11,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const { loadFromSupabase, isLoaded, tossUserId } = useStore();
   const pathname = usePathname();
 
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem('heartbook-onboarding-seen') === 'true'
+  );
 
   useEffect(() => {
     loadFromSupabase();

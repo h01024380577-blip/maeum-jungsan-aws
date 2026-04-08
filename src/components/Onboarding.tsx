@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "@/src/store/useStore";
 import { tossLogin } from "@/src/lib/tossAuth";
 import { apiFetch, setAuthToken } from "@/src/lib/apiClient";
+import { toast } from "sonner";
 
 const SLIDES = [
   {
@@ -70,7 +71,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     setIsLogging(true);
     try {
       const result = await tossLogin();
-      if (!result) return;
+      if (!result) {
+        toast.error('토스 로그인이 취소되었습니다.');
+        return;
+      }
       const res = await apiFetch('/api/auth/toss', {
         method: 'POST',
         body: JSON.stringify(result),
@@ -80,9 +84,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         if (data.token) setAuthToken(data.token);
         localStorage.setItem('heartbook-onboarding-seen', 'true');
         await loadFromSupabase();
+        onComplete();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.message || err.error || `로그인 실패 (${res.status})`);
       }
-    } catch {
-      // silent
+    } catch (e) {
+      console.error('[Onboarding] login error:', e);
+      toast.error('로그인 중 오류가 발생했습니다.');
     } finally {
       setIsLogging(false);
     }
