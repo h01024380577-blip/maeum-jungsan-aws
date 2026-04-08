@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, UserPlus, ArrowRight, TrendingUp, TrendingDown, User } from 'lucide-react';
+import { Search, UserPlus, ArrowRight, User } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { motion } from 'framer-motion';
 import ContactDetail from '../components/ContactDetail';
@@ -150,7 +150,6 @@ export default function ContactsTab() {
                 <div className="flex items-center space-x-3 shrink-0">
                   <div className="text-right">
                     <div className={`text-sm font-black flex items-center justify-end ${bal === 0 ? 'text-gray-400' : bal > 0 ? 'text-blue-600' : 'text-red-500'}`}>
-                      {bal !== 0 && (bal > 0 ? <TrendingUp size={11} className="mr-1" /> : <TrendingDown size={11} className="mr-1" />)}
                       {bal >= 0 ? '+' : ''}{bal.toLocaleString()}
                     </div>
                   </div>
