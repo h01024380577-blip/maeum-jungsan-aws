@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const ALLOWED_ORIGINS = [
   'https://maeum-jungsan.apps.tossmini.com',
   'https://maeum-jungsan.private-apps.tossmini.com',
+  'https://maeum-jungsan.duckdns.org',
   'http://localhost:3000',
 ];
 
