@@ -43,17 +43,21 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
     return () => window.removeEventListener('popstate', handlePopState);
   }, [activeTab, router]);
 
-  const handleExit = useCallback(() => {
+  const handleExit = useCallback(async () => {
     if (isAppsInToss()) {
-      import('@apps-in-toss/web-framework').then((sdk: any) => {
-        sdk.closeApp?.();
-      }).catch(() => {
+      try {
+        const { closeView } = await import('@apps-in-toss/web-framework');
+        await closeView();
+      } catch {
+        // closeView 실패 시 fallback
         window.history.go(-(window.history.length - 1));
-      });
+      }
     } else {
+      // 웹 브라우저: 탭 닫기 시도 → 안 되면 히스토리 초기화
       window.close();
-      // window.close()가 안 먹히는 경우 (직접 열린 탭이 아닌 경우)
-      window.history.go(-(window.history.length - 1));
+      setTimeout(() => {
+        window.history.go(-(window.history.length - 1));
+      }, 100);
     }
   }, []);
 
