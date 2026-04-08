@@ -46,7 +46,7 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
         </main>
 
         {/* Bottom Navigation */}
-        <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 safe-bottom z-50">
+        <nav className="shrink-0 bg-white border-t border-gray-100 safe-bottom z-50">
           <div className="flex justify-around items-center pt-2.5 pb-2 px-3">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.key;

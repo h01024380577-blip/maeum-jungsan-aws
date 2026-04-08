@@ -8,6 +8,7 @@
     "build": "granite build",
     "build:next": "prisma generate && next build",
     "build:csr": "NEXT_BUILD_CSR=1 prisma generate && next build",
+    "build:ait": "NEXT_BUILD_CSR=1 next build",
     "start": "next start",
     "lint": "eslint .",
     "postinstall": "prisma generate"

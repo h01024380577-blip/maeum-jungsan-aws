@@ -95,14 +95,14 @@ export default function ContactsTab() {
 
   if (selectedContactId) {
     return (
-      <div className="px-5 pt-14 pb-24">
+      <div className="px-5 pt-14 pb-4">
         <ContactDetail contactId={selectedContactId} onBack={() => setSelectedContactId(null)} />
       </div>
     );
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-4">
       <div className="px-5 pt-14 pb-4 bg-white">
         <div className="flex items-center justify-between">
           <div>

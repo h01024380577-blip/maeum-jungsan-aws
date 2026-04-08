@@ -12,7 +12,7 @@ export default defineConfig({
     port: 3000,
     commands: {
       dev: 'next dev',
-      build: 'next build',
+      build: 'npm run build:ait',
     },
   },
   webViewProps: {

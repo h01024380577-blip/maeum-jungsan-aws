@@ -256,7 +256,7 @@ export default function HomeTab() {
   const recentEntries = entries.slice(0, 3);
 
   return (
-    <div className="pb-24">
+    <div className="pb-4">
       {/* Toast */}
       <AnimatePresence>
         {toastData && (

@@ -43,7 +43,7 @@ export default function HistoryTab() {
   });
 
   return (
-    <div className="pb-24">
+    <div className="pb-4">
       <div className="px-5 pt-14 pb-4 bg-white">
         <div className="flex justify-between items-center">
           <div>

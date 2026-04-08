@@ -36,7 +36,7 @@ export default function CalendarTab() {
   const selectedDayEvents = getDateEntries(selectedDate);
 
   return (
-    <div className="pb-24">
+    <div className="pb-4">
       <div className="px-5 pt-14 pb-4 bg-white">
         <h1 className="text-[22px] font-black text-gray-900 tracking-tight">경조사 달력</h1>
         <p className="text-xs text-gray-400 mt-0.5">날짜를 선택해서 일정을 확인하세요</p>

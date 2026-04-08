@@ -35,7 +35,7 @@ export default function StatisticsTab() {
   const total = filtered.reduce((s, e) => s + e.amount, 0);
 
   return (
-    <div className="pb-24">
+    <div className="pb-4">
       <div className="px-5 pt-14 pb-4 bg-white">
         <h1 className="text-[22px] font-black text-gray-900 tracking-tight">통계 리포트</h1>
         <p className="text-xs text-gray-400 mt-0.5">경조사 수입/지출 분석</p>

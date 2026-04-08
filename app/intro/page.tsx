@@ -1,24 +1,42 @@
 "use client";
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, Sparkles, Shield } from 'lucide-react';
 import { tossLogin } from '@/src/lib/tossAuth';
 import { apiFetch, setAuthToken } from '@/src/lib/apiClient';
+import { toast } from 'sonner';
 
 export default function IntroPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const handleStart = async () => {
-    const result = await tossLogin();
-    if (!result) return;
-    const res = await apiFetch('/api/auth/toss', {
-      method: 'POST',
-      body: JSON.stringify(result),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.token) setAuthToken(data.token);
-      router.push('/');
+    if (loading) return;
+    setLoading(true);
+    try {
+      const result = await tossLogin();
+      if (!result) {
+        toast.error('토스 로그인이 취소되었습니다.');
+        return;
+      }
+      const res = await apiFetch('/api/auth/toss', {
+        method: 'POST',
+        body: JSON.stringify(result),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) setAuthToken(data.token);
+        router.push('/');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || `로그인 실패 (${res.status})`);
+      }
+    } catch (e: any) {
+      toast.error(`오류: ${e?.message || '알 수 없는 에러'}`);
+      console.error('[intro] handleStart error:', e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,9 +72,10 @@ export default function IntroPage() {
       </div>
       <button
         onClick={handleStart}
-        className="w-full py-4 bg-blue-500 text-white rounded-2xl font-bold text-base shadow-lg shadow-blue-200 active:scale-[0.98] transition-all"
+        disabled={loading}
+        className="w-full py-4 bg-blue-500 text-white rounded-2xl font-bold text-base shadow-lg shadow-blue-200 active:scale-[0.98] transition-all disabled:opacity-50"
       >
-        토스로 시작하기
+        {loading ? '로그인 중...' : '토스로 시작하기'}
       </button>
     </div>
   );
