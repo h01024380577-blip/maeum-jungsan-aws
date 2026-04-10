@@ -807,23 +807,51 @@ export default function HomeTab() {
 
 function Field({ label, value, onChange, type = 'text', options = [], ai = false, contacts = [], placeholder = '', suggestedNames = [] }: any) {
   const [show, setShow] = useState(false);
-  // Korean IME composition guard: prevent composed character leaking to next field
+  // Local state + DOM ref to prevent Korean IME composition leaking across fields
+  const [localValue, setLocalValue] = useState(value ?? '');
   const composingRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync from parent (AI suggestions, chip clicks, etc.) — skip during composition
+  React.useEffect(() => {
+    if (!composingRef.current) {
+      setLocalValue(value ?? '');
+    }
+  }, [value]);
+
+  const handleFocus = useCallback((extra?: () => void) => () => {
+    extra?.();
+    const clean = value ?? '';
+    setLocalValue(clean);
+    // Force DOM cleanup after stale IME events settle
+    setTimeout(() => {
+      if (inputRef.current && inputRef.current.value !== clean) {
+        inputRef.current.value = clean;
+        setLocalValue(clean);
+      }
+    }, 50);
+  }, [value]);
+
   const handleCompositionStart = useCallback(() => { composingRef.current = true; }, []);
   const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
     composingRef.current = false;
-    onChange(e.currentTarget.value);
+    const v = e.currentTarget.value;
+    setLocalValue(v);
+    onChange(v);
   }, [onChange]);
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    setLocalValue(v);
     if (!composingRef.current) {
-      onChange(e.target.value);
+      onChange(v);
     }
   }, [onChange]);
+
   // suggestedNames를 정규화: string | {name, label} 둘 다 지원
   const normalizedSuggestions: { name: string; label: string }[] = suggestedNames
     .map((s: any) => typeof s === 'string' ? { name: s, label: s } : { name: s.name, label: s.label || s.name })
     .filter((s: any) => s.name);
-  const contactSuggestions = contacts.filter((c: any) => c.name.toLowerCase().includes((value || '').toLowerCase()));
+  const contactSuggestions = contacts.filter((c: any) => c.name.toLowerCase().includes((localValue || '').toLowerCase()));
 
   return (
     <div className="space-y-1 relative">
@@ -837,7 +865,7 @@ function Field({ label, value, onChange, type = 'text', options = [], ai = false
         </select>
       ) : type === 'contact' ? (
         <div className="relative">
-          <input type="text" value={value || ''} placeholder={placeholder} onFocus={() => setShow(true)} onBlur={() => setTimeout(() => setShow(false), 200)} onChange={handleInputChange} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
+          <input ref={inputRef} type="text" value={localValue} placeholder={placeholder} onFocus={handleFocus(() => setShow(true))} onBlur={() => setTimeout(() => setShow(false), 200)} onChange={handleInputChange} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
           {/* AI 제안 이름 칩 — 모두 표시, 선택된 항목 하이라이트 */}
           {normalizedSuggestions.length > 1 && (
             <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -862,7 +890,7 @@ function Field({ label, value, onChange, type = 'text', options = [], ai = false
       ) : type === 'date' ? (
         <input type="date" value={value || ''} placeholder="yyyy-MM-dd" onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 appearance-none min-w-0 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
       ) : (
-        <input type={type} value={value || ''} placeholder={placeholder} onChange={handleInputChange} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
+        <input ref={inputRef} type={type} value={localValue} placeholder={placeholder} onFocus={handleFocus()} onChange={handleInputChange} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
       )}
     </div>
   );
