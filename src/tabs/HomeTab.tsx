@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { apiFetch } from '@/src/lib/apiClient';
 import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
@@ -807,6 +807,18 @@ export default function HomeTab() {
 
 function Field({ label, value, onChange, type = 'text', options = [], ai = false, contacts = [], placeholder = '', suggestedNames = [] }: any) {
   const [show, setShow] = useState(false);
+  // Korean IME composition guard: prevent composed character leaking to next field
+  const composingRef = useRef(false);
+  const handleCompositionStart = useCallback(() => { composingRef.current = true; }, []);
+  const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
+    composingRef.current = false;
+    onChange(e.currentTarget.value);
+  }, [onChange]);
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!composingRef.current) {
+      onChange(e.target.value);
+    }
+  }, [onChange]);
   // suggestedNames를 정규화: string | {name, label} 둘 다 지원
   const normalizedSuggestions: { name: string; label: string }[] = suggestedNames
     .map((s: any) => typeof s === 'string' ? { name: s, label: s } : { name: s.name, label: s.label || s.name })
@@ -825,7 +837,7 @@ function Field({ label, value, onChange, type = 'text', options = [], ai = false
         </select>
       ) : type === 'contact' ? (
         <div className="relative">
-          <input type="text" value={value || ''} placeholder={placeholder} onFocus={() => setShow(true)} onBlur={() => setTimeout(() => setShow(false), 200)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
+          <input type="text" value={value || ''} placeholder={placeholder} onFocus={() => setShow(true)} onBlur={() => setTimeout(() => setShow(false), 200)} onChange={handleInputChange} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
           {/* AI 제안 이름 칩 — 모두 표시, 선택된 항목 하이라이트 */}
           {normalizedSuggestions.length > 1 && (
             <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -850,7 +862,7 @@ function Field({ label, value, onChange, type = 'text', options = [], ai = false
       ) : type === 'date' ? (
         <input type="date" value={value || ''} placeholder="yyyy-MM-dd" onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 appearance-none min-w-0 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
       ) : (
-        <input type={type} value={value || ''} placeholder={placeholder} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
+        <input type={type} value={value || ''} placeholder={placeholder} onChange={handleInputChange} onCompositionStart={handleCompositionStart} onCompositionEnd={handleCompositionEnd} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`w-full p-3 rounded-xl text-sm font-bold outline-none border border-gray-100 ${ai ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-900'}`} />
       )}
     </div>
   );
