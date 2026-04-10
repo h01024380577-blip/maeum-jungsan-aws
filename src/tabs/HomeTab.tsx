@@ -504,9 +504,9 @@ export default function HomeTab() {
                     <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">{parsedData.recommendationReason}</span>
                     <span className="text-[8px] font-black text-white bg-blue-500 px-2 py-0.5 rounded-full">AI 추천</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <input type="text" inputMode="numeric" value={parsedData.amount ? Number(parsedData.amount).toLocaleString() : ''} onChange={(e) => { const raw = e.target.value.replace(/[^0-9]/g, ''); setParsedData({...parsedData, amount: Number(raw) || 0}); }} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="flex-1 bg-transparent text-2xl font-black text-blue-700 outline-none" />
-                    <span className="text-base font-bold text-blue-500">원</span>
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <input type="text" inputMode="numeric" value={parsedData.amount ? Number(parsedData.amount).toLocaleString() : ''} onChange={(e) => { const raw = e.target.value.replace(/[^0-9]/g, ''); setParsedData({...parsedData, amount: Number(raw) || 0}); }} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="flex-1 min-w-0 bg-transparent text-2xl font-black text-blue-700 outline-none" />
+                    <span className="text-base font-bold text-blue-500 shrink-0">원</span>
                   </div>
                   <div className="flex space-x-1.5 sm:space-x-2 mt-3">
                     {[{ l: '-1만', d: -10000 }, { l: '+1만', d: 10000 }, { l: '+5만', d: 50000 }, { l: '+10만', d: 100000 }].map(b => (
