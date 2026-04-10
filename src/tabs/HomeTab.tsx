@@ -472,14 +472,14 @@ export default function HomeTab() {
         {showBottomSheet && parsedData && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBottomSheet(false)} className="fixed inset-0 bg-black/40 z-[60]" />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[28px] px-4 py-5 sm:p-6 z-[70] shadow-2xl overflow-x-hidden">
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-              <div className="flex items-center justify-between mb-5">
+            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] max-h-[90dvh] bg-white rounded-t-[28px] px-4 py-5 sm:p-6 z-[70] shadow-2xl overflow-x-hidden flex flex-col">
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 shrink-0" />
+              <div className="flex items-center justify-between mb-5 shrink-0">
                 <h3 className="text-lg font-black text-gray-900">분석 결과 확인</h3>
                 <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center">{eventIcon(parsedData.eventType || 'other')}</div>
               </div>
 
-              <div className="space-y-3 max-h-[55vh] overflow-y-auto pb-2 no-scrollbar">
+              <div className="space-y-3 flex-1 overflow-y-auto pb-2 no-scrollbar">
                 <div className="flex bg-gray-100 p-1 rounded-xl">
                   <button onClick={() => setParsedData({...parsedData, type: 'EXPENSE', isIncome: false})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${parsedData.type === 'EXPENSE' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400'}`}>
                     <ArrowUpRight size={12} /><span>보냄 (OUT)</span>

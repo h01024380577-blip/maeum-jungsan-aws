@@ -167,13 +167,14 @@ export default function HistoryTab() {
       {/* 수정 바텀시트 */}
       {editTarget && (
         <div className="fixed inset-0 bg-black/40 z-[200] flex items-end justify-center" onClick={() => !isSaving && setEditTarget(null)}>
-          <div className="bg-white rounded-t-3xl w-full max-w-[430px] p-5 pb-10 space-y-3" onClick={ev => ev.stopPropagation()}>
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-2" />
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-white rounded-t-3xl w-full max-w-[430px] max-h-[90dvh] flex flex-col p-5 pb-10" onClick={ev => ev.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-2 shrink-0" />
+            <div className="flex items-center justify-between mb-2 shrink-0">
               <h3 className="text-base font-black text-gray-900">내역 수정</h3>
               <span className="text-xs text-gray-400">{editTarget.targetName}</span>
             </div>
 
+            <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar">
             {/* 보냄/받음 토글 */}
             <div className="flex bg-gray-100 p-1 rounded-xl">
               <button onClick={() => setEditTarget({...editTarget, type: 'EXPENSE', isIncome: false})} className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${editTarget.type === 'EXPENSE' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-400'}`}>
@@ -225,8 +226,9 @@ export default function HistoryTab() {
               <input type="text" value={editTarget.relation || ''} onChange={(e) => setEditTarget({...editTarget, relation: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl text-sm font-bold outline-none border border-gray-100" />
             </div>
 
+            </div>
             {/* 버튼 */}
-            <div className="flex space-x-2 pt-2">
+            <div className="flex space-x-2 pt-3 shrink-0">
               <button onClick={() => setDeleteTarget({ id: editTarget.id, name: editTarget.targetName })} className="px-4 py-3.5 bg-red-50 text-red-500 rounded-2xl text-sm font-bold active:scale-[0.98] transition-all">
                 삭제
               </button>
