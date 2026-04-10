@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Search, UserPlus, ArrowRight, User } from 'lucide-react';
+import { Search, UserPlus, ArrowRight, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ContactDetail from '../components/ContactDetail';
 
 export default function ContactsTab() {
@@ -33,6 +33,7 @@ export default function ContactsTab() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const [showConfirm, setShowConfirm] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ type: 'success' | 'error'; message: string; count?: number } | null>(null);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -77,18 +78,18 @@ export default function ContactsTab() {
       }
 
       if (allContacts.length === 0) {
-        alert('가져올 연락처가 없습니다.');
+        setSyncResult({ type: 'error', message: '가져올 연락처가 없습니다' });
         return;
       }
 
       await syncContacts(allContacts);
-      alert(`${allContacts.length}명의 연락처를 불러왔습니다.`);
+      setSyncResult({ type: 'success', message: '연락처를 불러왔습니다', count: allContacts.length });
     } catch (err: any) {
       console.error('연락처 불러오기 실패:', err);
       if (err?.name === 'FetchContactsPermissionError') {
-        alert('연락처 접근 권한이 없습니다. 설정에서 허용해 주세요.');
+        setSyncResult({ type: 'error', message: '연락처 접근 권한이 필요합니다\n설정에서 허용해 주세요' });
       } else {
-        alert(`연락처를 불러오는 데 실패했습니다: ${err?.message ?? ''}`);
+        setSyncResult({ type: 'error', message: '연락처를 불러오지 못했습니다' });
       }
     } finally {
       setIsSyncing(false);
@@ -203,6 +204,39 @@ export default function ContactsTab() {
           </motion.div>
         </div>
       )}
+
+      {/* 연동 결과 모달 */}
+      <AnimatePresence>
+        {syncResult && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-6" onClick={() => setSyncResult(null)}>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-[320px] shadow-xl text-center"
+            >
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${syncResult.type === 'success' ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                {syncResult.type === 'success'
+                  ? <CheckCircle size={28} className="text-emerald-500" />
+                  : <AlertCircle size={28} className="text-red-400" />
+                }
+              </div>
+              {syncResult.type === 'success' && syncResult.count && (
+                <p className="text-3xl font-black text-gray-900 mb-1">{syncResult.count}<span className="text-base font-bold text-gray-400">명</span></p>
+              )}
+              <p className="text-sm font-bold text-gray-700 whitespace-pre-line">{syncResult.message}</p>
+              <button
+                onClick={() => setSyncResult(null)}
+                className={`w-full mt-5 py-3 rounded-xl text-sm font-bold text-white active:scale-95 transition-all ${syncResult.type === 'success' ? 'bg-emerald-500' : 'bg-red-400'}`}
+              >
+                확인
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
