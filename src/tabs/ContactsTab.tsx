@@ -217,9 +217,9 @@ export default function ContactsTab() {
               onClick={e => e.stopPropagation()}
               className="bg-white rounded-2xl p-6 w-full max-w-[320px] shadow-xl text-center"
             >
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${syncResult.type === 'success' ? 'bg-emerald-50' : 'bg-red-50'}`}>
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${syncResult.type === 'success' ? 'bg-blue-50' : 'bg-red-50'}`}>
                 {syncResult.type === 'success'
-                  ? <CheckCircle size={28} className="text-emerald-500" />
+                  ? <CheckCircle size={28} className="text-blue-500" />
                   : <AlertCircle size={28} className="text-red-400" />
                 }
               </div>
@@ -229,7 +229,7 @@ export default function ContactsTab() {
               <p className="text-sm font-bold text-gray-700 whitespace-pre-line">{syncResult.message}</p>
               <button
                 onClick={() => setSyncResult(null)}
-                className={`w-full mt-5 py-3 rounded-xl text-sm font-bold text-white active:scale-95 transition-all ${syncResult.type === 'success' ? 'bg-emerald-500' : 'bg-red-400'}`}
+                className={`w-full mt-5 py-3 rounded-xl text-sm font-bold text-white active:scale-95 transition-all ${syncResult.type === 'success' ? 'bg-blue-500' : 'bg-red-400'}`}
               >
                 확인
               </button>
