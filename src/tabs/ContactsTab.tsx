@@ -32,6 +32,8 @@ export default function ContactsTab() {
 
   const [isSyncing, setIsSyncing] = useState(false);
 
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const handleSync = async () => {
     setIsSyncing(true);
     try {
@@ -109,7 +111,7 @@ export default function ContactsTab() {
             <h1 className="text-[22px] font-black text-gray-900 tracking-tight">연락처 관리</h1>
             <p className="text-xs text-gray-400 mt-0.5">{contacts.length}명의 연락처</p>
           </div>
-          <button onClick={handleSync} disabled={isSyncing} className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-100 transition-colors active:scale-95 disabled:opacity-50">
+          <button onClick={() => setShowConfirm(true)} disabled={isSyncing} className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center hover:bg-blue-100 transition-colors active:scale-95 disabled:opacity-50">
             {isSyncing ? <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : <UserPlus size={18} />}
           </button>
         </div>
@@ -166,6 +168,41 @@ export default function ContactsTab() {
           )}
         </div>
       </div>
+
+      {/* 연락처 연동 확인 모달 */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-6" onClick={() => setShowConfirm(false)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.15 }}
+            onClick={e => e.stopPropagation()}
+            className="bg-white rounded-2xl p-6 w-full max-w-[320px] shadow-xl"
+          >
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <UserPlus size={22} className="text-blue-500" />
+            </div>
+            <h3 className="text-base font-black text-gray-900 text-center">전화번호부 연동</h3>
+            <p className="text-xs text-gray-400 text-center mt-2 leading-relaxed">
+              기기의 전화번호부에서 연락처를<br/>불러옵니다. 계속하시겠습니까?
+            </p>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-400 bg-gray-100 active:scale-95 transition-all"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { setShowConfirm(false); handleSync(); }}
+                className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-blue-500 active:scale-95 transition-all"
+              >
+                연동하기
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
