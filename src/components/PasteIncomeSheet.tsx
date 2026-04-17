@@ -398,7 +398,7 @@ export default function PasteIncomeSheet({ isOpen, onClose }: Props) {
               )}
             </div>
 
-            <div className="px-6 pb-6 pt-2 shrink-0 border-t border-gray-50">
+            <div className="px-6 pt-2 shrink-0 border-t border-gray-50 pb-[calc(env(safe-area-inset-bottom,0px)+24px)]">
               {step === 'input' ? (
                 <button
                   onClick={handleAnalyze}
