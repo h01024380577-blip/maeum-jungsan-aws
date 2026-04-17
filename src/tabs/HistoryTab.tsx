@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useStore, EventType } from '../store/useStore';
-import { Search, Trash2, Heart, Flower2, Cake, Star, FileSpreadsheet, Pencil, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Search, Trash2, Heart, Flower2, Cake, Star, FileSpreadsheet, Pencil, ArrowUpRight, ArrowDownLeft, Clipboard } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import BulkImportModal from '../components/BulkImportModal';
 import ContactDetail from '../components/ContactDetail';
+import PasteIncomeSheet from '../components/PasteIncomeSheet';
 
 const eventIcon = (t: string) => {
   if (t === 'wedding') return <Heart size={14} className="text-pink-500 fill-pink-500" />;
@@ -23,6 +24,7 @@ export default function HistoryTab() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'given' | 'received'>('all');
   const [importOpen, setImportOpen] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -78,6 +80,7 @@ export default function HistoryTab() {
       </div>
 
       <BulkImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
+      <PasteIncomeSheet isOpen={pasteOpen} onClose={() => setPasteOpen(false)} />
 
       <div className="px-5 pt-4 space-y-3">
         {/* Search */}
@@ -142,6 +145,17 @@ export default function HistoryTab() {
           )}
         </div>
       </div>
+
+      {/* "받음" 필터 시 하단 FAB: 알림 붙여넣기 */}
+      {filter === 'received' && !pasteOpen && (
+        <button
+          onClick={() => setPasteOpen(true)}
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[50] bg-blue-600 text-white px-5 py-3.5 rounded-full shadow-xl shadow-blue-200 flex items-center space-x-2 text-sm font-bold active:scale-95 transition-all"
+        >
+          <Clipboard size={16} />
+          <span>알림 붙여넣기</span>
+        </button>
+      )}
 
       {/* 삭제 확인 다이얼로그 */}
       {deleteTarget && (

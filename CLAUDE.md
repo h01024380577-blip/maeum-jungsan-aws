@@ -11,12 +11,15 @@ Key features: AI-powered invitation URL parsing (Gemini 2.5 Flash), CSV bulk imp
 ## Commands
 
 - **Dev server:** `npm run dev` (runs `granite dev` — Apps-in-Toss dev wrapper around `next dev`)
-- **Build (Next.js only):** `npm run build:next` (runs `prisma generate && next build`)
-- **Build (Toss platform):** `npm run build` (runs `granite build`)
+- **Build (Next.js full, with API):** `npm run build:next` (runs `prisma generate && next build`) — used on EC2 for the server build
+- **Build (Toss AIT bundle):** `npm run build` (runs `granite build` → `npm run build:ait`) — produces the CSR-only client bundle in `dist/web/` for upload to the Toss platform
+- **Build (CSR only, manual):** `npm run build:csr` (sets `NEXT_BUILD_CSR=1`)
+- **Production server:** `npm run start` (next start, after `build:next`)
 - **Lint:** `npm run lint`
 - **Tests:** `npx vitest run` (or `npx vitest` for watch mode)
 - **Run a single test file:** `npx vitest run src/lib/parseUrl.test.ts`
 - **After `npm install`:** `prisma generate` runs automatically via `postinstall`
+- **Deploy (full):** `bash scripts/deploy.sh` (git push → SSH into EC2 → `git pull && prisma generate && build:next && pm2 restart` → conditionally rebuild AIT bundle if client files changed)
 
 ## Architecture
 
@@ -24,13 +27,27 @@ Key features: AI-powered invitation URL parsing (Gemini 2.5 Flash), CSV bulk imp
 
 This is **not** a standard Next.js or Vercel app. It's a Toss mini-app configured in `granite.config.ts`. The `granite` CLI wraps Next.js dev/build. The app requests permissions: `CLIPBOARD` (read/write), `CONTACTS` (read).
 
+Stack: **Next.js 16** (App Router) + **React 19** + **Tailwind CSS v4** (`@tailwindcss/postcss`) + **TypeScript 5.8** + **Vitest 4**. Verify API shapes before coding — these are recent major versions.
+
+### Dual-Build Architecture (critical)
+
+The same Next.js codebase produces **two distinct artifacts**, each deployed differently:
+
+1. **Server build (`build:next`)** — full Next.js app including `app/api/*` route handlers. Runs on **EC2** under `pm2` (process name `maeum-jungsan`). Owns Prisma, Gemini, Toss server APIs, cron endpoints. Public host serves both pages and JSON APIs.
+2. **AIT CSR bundle (`build:ait`)** — `scripts/build-ait.sh` temporarily moves `app/api` → `app/_api_ait_backup`, sets `NEXT_BUILD_CSR=1`, runs `next build`, then restores `app/api` via a `trap`. This produces a static client bundle in `dist/web/` to upload to Toss via `granite deploy`. The bundle's API calls hit the EC2 host over the network (see `src/lib/apiClient.ts`).
+
+When editing API routes, only the EC2 build needs to redeploy. When editing `src/`, `components/`, `app/**/*.tsx`, `public/`, or `styles/`, both builds need to redeploy — `scripts/deploy.sh` detects this via `git diff HEAD~1` and conditionally rebuilds the AIT bundle.
+
 ### Authentication
 
-Two-tier user identity system used by all API routes:
-1. **Toss login (priority):** `toss_user_id` cookie set after calling `appLogin()` from `@apps-in-toss/web-framework`. Client-side: `src/lib/tossAuth.ts`. Server-side helper: `src/lib/apiAuth.ts` (`getAuthenticatedUserId()`).
-2. **Guest / device ID (fallback):** `x-user-id` request header, populated by `getUserId()` in `src/store/useStore.ts`. Resolution order: Toss cookie → `@apps-in-toss/web-framework` `getDeviceId()` → `localStorage`.
+Three-tier identity system used by all API routes:
+1. **JWT Bearer token (priority):** `Authorization: Bearer <token>` header. Issued by `POST /api/auth/toss` after Toss OAuth exchange. Custom HS256 implementation in `src/lib/jwt.ts` (14-day expiry, payload: `{ userId, userKey }`). Required for CSR/native WebView mode.
+2. **Cookie fallback:** `toss_user_id` cookie — set alongside JWT for SSR backwards-compatibility.
+3. **Guest / device ID:** `x-user-id` request header, populated by `getUserId()` in `src/store/useStore.ts`. Resolution order: `getDeviceId()` from `@apps-in-toss/web-framework` → `localStorage`.
 
-API routes in `app/api/entries/route.ts` and `app/api/contacts/route.ts` check `toss_user_id` cookie first, then `x-user-id` header. Unauthenticated requests with neither are rejected (401). Guest saves auto-upsert a `User` row.
+Server-side helper `src/lib/apiAuth.ts` → `getAuthenticatedUserId()` checks Bearer JWT first, then `toss_user_id` cookie. Toss Pay routes also read `toss_user_key` cookie (or JWT's `userKey`) to make Toss Pay API calls on behalf of the user.
+
+**Toss OAuth flow** (`app/api/auth/toss/route.ts`): authorizationCode → Toss token endpoint → user info (`userKey`, encrypted `name`) → `decryptField()` in `src/lib/tossApiClient.ts` → DB upsert → issue JWT + set cookies.
 
 ### Data Layer: Prisma 6 + PostgreSQL (Supabase)
 
@@ -76,6 +93,12 @@ All in `app/api/`:
 - `POST /api/parse-url` — 3-phase AI invitation URL parser (see below)
 - `POST /api/analyze` — AI image/text analysis
 - `GET|POST /api/events` — Prisma-based events (separate from entries; partially wired)
+- `POST /api/auth/toss` — Toss OAuth code exchange → JWT issuance
+- `POST /api/payment/create`, `POST /api/payment/execute` — Toss Pay billing flow
+- `POST /api/feedback` — user feedback submission (Resend email delivery)
+- `POST /api/notification-consent` — toggles `User.notificationsEnabled`
+- `POST /api/send-notification`, `POST /api/test-message` — Toss Messenger push helpers (use `src/lib/tossMessengerFetch.ts`)
+- `GET /api/cron/event-reminder`, `GET /api/cron/notify` — cron endpoints, **gated by `Authorization: Bearer ${CRON_SECRET}`**. Triggered by EC2 `crontab` running `scripts/cron-event-reminder.sh` (KST 09:00 daily) — not Vercel Cron.
 
 ### AI URL Parsing Pipeline (`app/api/parse-url/route.ts`)
 
@@ -100,7 +123,15 @@ Vitest (`vitest.config.ts`). Path alias `@` → project root. Test files live al
 ### Key Source Files
 
 Beyond the API routes and tab pages, notable files in `src/`:
+- `src/lib/prisma.ts` — singleton PrismaClient (avoid re-instantiation in API routes)
+- `src/lib/apiClient.ts` — client-side fetch helper that injects auth headers (JWT/`x-user-id`); use this from `src/` instead of bare `fetch`
+- `src/lib/apiAuth.ts` — server-side `getAuthenticatedUserId()` — JWT bearer first, then `toss_user_id` cookie
+- `src/lib/jwt.ts` — custom HS256 sign/verify (no library dependency)
+- `src/lib/cors.ts` — CORS helpers for cross-origin AIT bundle → EC2 calls
+- `src/lib/tossApiClient.ts` — Toss OAuth + `decryptField()` (AES-256-GCM)
+- `src/lib/tossAuth.ts` — high-level Toss auth wrapper
 - `src/lib/tossPayFetch.ts` — Toss Pay API fetch helpers
+- `src/lib/tossMessengerFetch.ts` — Toss Messenger push notification helpers
 - `src/lib/events.ts` — Prisma event helper functions (used by `/api/events`)
 - `src/hooks/useEvents.ts` — React hook wrapping event CRUD
 - `src/utils/csvParser.ts` — CSV parsing for bulk import (uses `papaparse`)
@@ -118,6 +149,7 @@ Beyond the API routes and tab pages, notable files in `src/`:
 - `swr` — client-side data fetching
 - `react-calendar` — calendar component in `CalendarTab`
 - `framer-motion` / `motion` — animations
+- `resend` — email delivery (used by `/api/feedback`)
 
 ### Environment Variables
 
@@ -126,6 +158,16 @@ Key variables (see `.env`):
 - `DIRECT_URL` — Supabase PostgreSQL session pooler (port 5432, Prisma migrate용)
 - `GEMINI_API_KEY` — Server-only Gemini API key (never use `NEXT_PUBLIC_GEMINI_API_KEY` in production)
 - `TOSS_DECRYPT_KEY` / `TOSS_DECRYPT_AAD` — AES-256 decryption for Toss auth tokens
+- `JWT_SECRET` — HS256 signing key for the custom JWT in `src/lib/jwt.ts`
+- `CRON_SECRET` — Bearer token checked by `/api/cron/*` routes; also loaded by `scripts/cron-event-reminder.sh`
+- `TOSS_MSG_TEMPLATE_CODE` — Toss Messenger push template ID (event reminder cron returns `no_template_configured` if unset)
+- `RESEND_API_KEY` — Resend API key for `/api/feedback` email delivery
+
+### Scripts Directory
+
+- `scripts/deploy.sh` — git push + SSH deploy orchestrator; conditionally rebuilds AIT bundle
+- `scripts/build-ait.sh` — CSR bundle builder (moves `app/api` aside via `trap` — see Known Constraints)
+- `scripts/cron-event-reminder.sh` — EC2 crontab entry hitting `/api/cron/event-reminder` with `CRON_SECRET`
 
 ### Language
 
@@ -133,7 +175,9 @@ UI is entirely in Korean. All user-facing strings, labels, and AI prompts are Ko
 
 ## Known Constraints
 
-- Prisma 6 is pinned — do not upgrade to Prisma 7 (Vercel serverless module resolution bug)
+- Prisma 6 is pinned — do not upgrade to Prisma 7 (Vercel serverless module resolution bug; same issue observed on Toss/AIT builds)
 - `Gemini urlContext` tool is incompatible with `responseMimeType: 'application/json'` — Phase 3 omits the MIME type
 - Supabase Direct connection DNS (`db.*.supabase.co`)가 로컬에서 안 풀릴 수 있음 — `DIRECT_URL`은 session pooler 사용
 - Build output goes to `dist/` (not `.next/`) — configured via `distDir: 'dist'` in `next.config.ts`
+- `scripts/build-ait.sh` deliberately excludes `app/api` from the CSR bundle by moving it aside — if the script crashes before the `trap`, manually restore `app/_api_ait_backup` → `app/api`
+- The app runs on **EC2 + pm2**, not Vercel. Don't suggest `vercel deploy`, Vercel Cron, or edge-runtime features — serverless assumptions don't apply

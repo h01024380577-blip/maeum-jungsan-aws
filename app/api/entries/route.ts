@@ -3,6 +3,15 @@ import { prisma } from '@/src/lib/prisma';
 import { verifyJwt } from '@/src/lib/jwt';
 import { corsResponse, withCors } from '@/src/lib/cors';
 
+const VALID_SOURCES = ['MANUAL', 'URL', 'OCR', 'SMS_PASTE', 'CSV'] as const;
+type TransactionSourceValue = (typeof VALID_SOURCES)[number];
+
+function normalizeSource(raw: unknown): TransactionSourceValue | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const upper = raw.toUpperCase() as TransactionSourceValue;
+  return (VALID_SOURCES as readonly string[]).includes(upper) ? upper : undefined;
+}
+
 function getUserId(req: NextRequest): string | null {
   // 1순위: Bearer 토큰
   const authHeader = req.headers.get('authorization');
@@ -37,6 +46,7 @@ function toEventEntry(event: any, tx: any) {
     customEventName: event.customEventName ?? '',
     memo: event.memo,
     isIncome: (tx?.type ?? 'EXPENSE') === 'INCOME',
+    source: tx?.source ?? 'MANUAL',
     createdAt: event.createdAt instanceof Date ? event.createdAt.getTime() : new Date(event.createdAt).getTime(),
     userId: event.userId,
   };
@@ -79,7 +89,8 @@ export async function POST(req: NextRequest) {
       contactId = existing ? existing.id : (await tx.contact.create({ data: { userId: realUserId, name: body.targetName, relation: body.relation || '지인' } })).id;
     }
     const event = await tx.event.create({ data: { userId: realUserId, contactId, eventType: body.eventType.toUpperCase(), targetName: body.targetName, date: new Date(body.date), location: body.location ?? '', relation: body.relation ?? '', memo: body.memo ?? '', account: body.account ?? '', customEventName: body.customEventName ?? null } });
-    const transaction = await tx.transaction.create({ data: { eventId: event.id, userId: realUserId, type: body.type ?? 'EXPENSE', amount: Number(body.amount) || 0, account: body.account ?? '', relation: body.relation ?? '', recommendationReason: body.recommendationReason ?? '' } });
+    const source = normalizeSource(body.source);
+    const transaction = await tx.transaction.create({ data: { eventId: event.id, userId: realUserId, type: body.type ?? 'EXPENSE', amount: Number(body.amount) || 0, account: body.account ?? '', relation: body.relation ?? '', recommendationReason: body.recommendationReason ?? '', ...(source ? { source } : {}) } });
     // 생성/조회된 contact 정보 반환 (클라이언트 store 동기화용)
     let contact = null;
     if (contactId) {

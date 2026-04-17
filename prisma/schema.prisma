@@ -89,18 +89,27 @@ enum TransactionType {
   INCOME
 }
 
+enum TransactionSource {
+  MANUAL
+  URL
+  OCR
+  SMS_PASTE
+  CSV
+}
+
 model Transaction {
-  id                   String          @id @default(cuid())
+  id                   String            @id @default(cuid())
   eventId              String
   userId               String
   type                 TransactionType
   amount               Int
-  account              String          @default("")
-  relation             String          @default("")
+  account              String            @default("")
+  relation             String            @default("")
   recommendationReason String?
-  isPaid               Boolean         @default(false)
+  isPaid               Boolean           @default(false)
   paidAt               DateTime?
-  createdAt            DateTime        @default(now())
+  source               TransactionSource @default(MANUAL)
+  createdAt            DateTime          @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

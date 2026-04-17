@@ -3,6 +3,12 @@ import { GoogleGenAI } from '@google/genai';
 import { fetchPageHtml } from '@/src/lib/fetchPage';
 import { extractMetaTags, extractJsonLd, extractBodyText, hasEnoughData } from '@/src/lib/parseUrl';
 import { corsResponse, withCors } from '@/src/lib/cors';
+import {
+  parseAiResponse,
+  calculateConfidence as calculateConfidenceFromFields,
+  isRateLimitError,
+  RATE_LIMIT_RESPONSE,
+} from '@/src/lib/geminiHelpers';
 
 export async function OPTIONS(req: NextRequest) {
   return corsResponse(req);
@@ -42,13 +48,6 @@ const OUTPUT_SCHEMA = `{
   "type": "EXPENSE"
 }`;
 
-function parseAiResponse(text: string): any {
-  try { return JSON.parse(text); } catch {
-    const m = text.match(/\{[\s\S]*\}/);
-    try { return m ? JSON.parse(m[0]) : {}; } catch { return {}; }
-  }
-}
-
 function normalizeData(parsed: any) {
   // suggestedNames / suggestedAccounts 보존
   const result: any = {
@@ -70,22 +69,8 @@ function normalizeData(parsed: any) {
 }
 
 function calculateConfidence(data: any): 'high' | 'medium' | 'low' {
-  const filled = [data.targetName, data.date, data.location]
-    .filter((v: string) => v && v.trim() !== '').length;
-  return filled >= 3 ? 'high' : filled >= 2 ? 'medium' : 'low';
+  return calculateConfidenceFromFields([data.targetName, data.date, data.location]);
 }
-
-/** Gemini API rate limit 에러인지 판별 */
-function isRateLimitError(err: any): boolean {
-  const msg = err?.message || JSON.stringify(err) || '';
-  return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
-}
-
-const RATE_LIMIT_RESPONSE = {
-  success: false as const,
-  reason: 'rate_limit' as const,
-  message: '무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.',
-};
 
 /**
  * Jina Reader API로 JS 렌더링된 페이지 텍스트 가져오기

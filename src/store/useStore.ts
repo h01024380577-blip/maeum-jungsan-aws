@@ -3,6 +3,7 @@ import { apiFetch, clearAuthToken } from '@/src/lib/apiClient';
 
 export type EventType = 'wedding' | 'funeral' | 'birthday' | 'other';
 export type TransactionType = 'INCOME' | 'EXPENSE';
+export type TransactionSource = 'MANUAL' | 'URL' | 'OCR' | 'SMS_PASTE' | 'CSV';
 
 export interface Contact {
   id: string;
@@ -29,6 +30,7 @@ export interface EventEntry {
   customEventName?: string;
   memo?: string;
   isIncome: boolean;
+  source?: TransactionSource;
   createdAt: number;
   userId: string;
 }
