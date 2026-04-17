@@ -12,6 +12,7 @@ export interface Contact {
   kakaoId?: string;
   relation: string;
   avatar?: string;
+  isFavorite?: boolean;
   userId: string;
 }
 

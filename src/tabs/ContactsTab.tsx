@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Search, UserPlus, ArrowRight, User, CheckCircle, AlertCircle } from 'lucide-react';
+import { Search, UserPlus, ArrowRight, User, CheckCircle, AlertCircle, Star } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContactDetail from '../components/ContactDetail';
 
 export default function ContactsTab() {
-  const { contacts, entries, syncContacts } = useStore();
+  const { contacts, entries, syncContacts, updateContact } = useStore();
   const [search, setSearch] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'name' | 'balance' | 'recent'>('name');
@@ -25,10 +25,17 @@ export default function ContactsTab() {
   const filtered = contacts
     .filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
+      // 즐겨찾기 항상 우선
+      const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+      if (favDiff !== 0) return favDiff;
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'balance') return getBalance(b.id) - getBalance(a.id);
       return getRecent(b.id) - getRecent(a.id);
     });
+
+  const toggleFavorite = (id: string, current: boolean) => {
+    updateContact(id, { isFavorite: !current });
+  };
 
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -139,9 +146,19 @@ export default function ContactsTab() {
             const cnt = getCount(c.id);
             return (
               <motion.div layout key={c.id} onClick={() => setSelectedContactId(c.id)}
-                className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
+                className={`bg-white p-4 rounded-2xl border flex items-center justify-between hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] ${c.isFavorite ? 'border-amber-200 bg-amber-50/30' : 'border-gray-100'}`}
               >
                 <div className="flex items-center space-x-3.5 min-w-0 flex-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id, !!c.isFavorite); }}
+                    className="shrink-0 p-1 -m-1 rounded-lg active:scale-90 transition-all"
+                    aria-label={c.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                  >
+                    <Star
+                      size={18}
+                      className={c.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-gray-200 hover:text-amber-300'}
+                    />
+                  </button>
                   <div className="w-11 h-11 shrink-0 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
                     <User size={22} />
                   </div>

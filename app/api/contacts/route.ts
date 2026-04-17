@@ -22,7 +22,7 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 function toContact(row: any) {
-  return { id: row.id, name: row.name, phone: row.phone ?? '', kakaoId: row.kakaoId ?? '', relation: row.relation ?? '', avatar: row.avatar ?? '', userId: row.userId };
+  return { id: row.id, name: row.name, phone: row.phone ?? '', kakaoId: row.kakaoId ?? '', relation: row.relation ?? '', avatar: row.avatar ?? '', isFavorite: row.isFavorite ?? false, userId: row.userId };
 }
 
 export async function GET(req: NextRequest) {
@@ -62,6 +62,7 @@ export async function PATCH(req: NextRequest) {
   if (body.name !== undefined) updates.name = body.name;
   if (body.phone !== undefined) updates.phone = body.phone;
   if (body.relation !== undefined) updates.relation = body.relation;
+  if (body.isFavorite !== undefined) updates.isFavorite = !!body.isFavorite;
   await prisma.contact.updateMany({ where: { id, userId }, data: updates });
   return withCors(req, NextResponse.json({ ok: true }));
 }
