@@ -151,7 +151,7 @@ export default function ContactsTab() {
                 <div className="flex items-center space-x-3.5 min-w-0 flex-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id, !!c.isFavorite); }}
-                    className="shrink-0 p-1 -m-1 rounded-lg active:scale-90 transition-all"
+                    className="shrink-0 p-1 -ml-2 mr-1 rounded-lg active:scale-90 transition-all"
                     aria-label={c.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
                   >
                     <Star
