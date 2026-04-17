@@ -3,7 +3,8 @@
 set -e
 
 EC2_HOST=kmuproj-maeum-jungsan
-EC2_DIR=~/maeum-jungsan-aws
+# Remote 경로 — 로컬에서 ~ 확장 방지 위해 $HOME 사용
+EC2_DIR='$HOME/maeum-jungsan-aws'
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # --- 1. Git push ---
@@ -27,8 +28,10 @@ if [ -n "$CLIENT_CHANGED" ]; then
   cd "$LOCAL_DIR"
   rm -rf dist
   npm run build:ait
-  echo "✅ AIT bundle rebuilt at dist/web/"
-  echo "👉 granite deploy (또는 ait deploy)로 번들을 업로드하세요"
+  echo "📦 Packaging .ait artifact..."
+  npx ait build
+  echo "✅ AIT artifact rebuilt (maeum-jungsan.ait)"
+  echo "👉 npx ait deploy 로 번들을 업로드하세요"
 else
   echo "⏭️  No client changes — skipping AIT bundle rebuild"
 fi

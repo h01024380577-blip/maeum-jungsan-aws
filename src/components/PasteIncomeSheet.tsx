@@ -1,9 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clipboard, Sparkles, Check, AlertCircle, Trash2, Users } from 'lucide-react';
+import { X, Clipboard, Sparkles, Check, AlertCircle, Trash2, Users, Heart, Flower2, Cake, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/src/lib/apiClient';
 import { useStore, type Contact, type EventType, type TransactionSource } from '@/src/store/useStore';
+
+const EVENT_OPTIONS: Array<{ value: EventType; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }> = [
+  { value: 'wedding', label: '결혼', Icon: Heart },
+  { value: 'funeral', label: '부고', Icon: Flower2 },
+  { value: 'birthday', label: '생일', Icon: Cake },
+  { value: 'other', label: '기타', Icon: Star },
+];
 
 interface Props {
   isOpen: boolean;
@@ -26,6 +33,7 @@ interface EditableRow extends ParsedIncome {
   _selected: boolean;
   /** 사용자가 명시 선택한 contactId. null=새로 생성, ''=자동 매칭 대기 */
   _contactId: string | null | '';
+  _eventType: EventType;
 }
 
 function isAppsInToss(): boolean {
@@ -129,6 +137,7 @@ export default function PasteIncomeSheet({ isOpen, onClose }: Props) {
             _selected: true,
             // 동명이인 2명+ → 첫 번째 기본 선택 (명시적), 그 외 → 서버 위임
             _contactId: matches.length >= 2 ? matches[0].id : '',
+            _eventType: 'other' as EventType,
           };
         }),
       );
@@ -167,6 +176,10 @@ export default function PasteIncomeSheet({ isOpen, onClose }: Props) {
     setRows((prev) => prev.map((r) => (r._key === key ? { ...r, _contactId: contactId } : r)));
   };
 
+  const updateEventType = (key: string, eventType: EventType) => {
+    setRows((prev) => prev.map((r) => (r._key === key ? { ...r, _eventType: eventType } : r)));
+  };
+
   const removeRow = (key: string) => {
     setRows((prev) => prev.filter((r) => r._key !== key));
   };
@@ -186,7 +199,7 @@ export default function PasteIncomeSheet({ isOpen, onClose }: Props) {
       for (const row of toSave) {
         await addEntry({
           contactId: row._contactId || '',
-          eventType: 'other' as EventType,
+          eventType: row._eventType,
           type: 'INCOME',
           date: row.date || today,
           location: '',
@@ -335,6 +348,27 @@ export default function PasteIncomeSheet({ isOpen, onClose }: Props) {
                                 </button>
                               </div>
                             </div>
+                            {row._selected && (
+                              <div className="flex items-center space-x-1 pt-1">
+                                {EVENT_OPTIONS.map(({ value, label, Icon }) => {
+                                  const active = row._eventType === value;
+                                  return (
+                                    <button
+                                      key={value}
+                                      onClick={() => updateEventType(row._key, value)}
+                                      className={`flex-1 flex items-center justify-center space-x-1 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                                        active
+                                          ? 'bg-blue-600 text-white shadow-sm'
+                                          : 'bg-gray-50 text-gray-500 border border-gray-100'
+                                      }`}
+                                    >
+                                      <Icon size={11} className={active ? 'text-white' : 'text-gray-400'} />
+                                      <span>{label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                             {hasDuplicate && row._selected && (
                               <div className="mt-1 p-2 bg-amber-50 rounded-lg space-y-1">
                                 <div className="flex items-center space-x-1 text-[11px] font-bold text-amber-700">

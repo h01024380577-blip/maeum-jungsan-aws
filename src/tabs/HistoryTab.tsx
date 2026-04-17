@@ -100,7 +100,7 @@ export default function HistoryTab() {
         </div>
 
         {/* List */}
-        <div className="space-y-2">
+        <div className={`space-y-2 ${filter === 'received' ? 'pb-28' : ''}`}>
           {filtered.length > 0 ? filtered.map(e => (
             <div key={e.id} onClick={() => setEditTarget({ ...e })} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between group relative overflow-hidden cursor-pointer active:scale-[0.98] transition-all">
               <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full ${e.type === 'INCOME' ? 'bg-blue-500' : 'bg-red-400'}`} />
