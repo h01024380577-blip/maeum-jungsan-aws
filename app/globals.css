@@ -1,7 +1,47 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Pretendard", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+  다크 모드 색상 오버라이드.
+  Tailwind v4 의 `bg-white`, `bg-gray-50`, `text-gray-900` 등 유틸리티는
+  모두 `var(--color-*)` 를 참조하므로, .dark 스코프에서 토큰을 재정의하면
+  전체 UI 가 자동으로 다크 톤으로 전환된다 (개별 컴포넌트 수정 없이).
+*/
+.dark {
+  /* 표면/카드 */
+  --color-white: #1c1c1e;
+  --color-gray-50: #242428;
+  --color-gray-100: #2d2d31;
+  --color-gray-200: #3a3a40;
+
+  /* 텍스트/보더 */
+  --color-gray-300: #6a6a72;
+  --color-gray-400: #8e8e95;
+  --color-gray-500: #a8a8b0;
+  --color-gray-600: #c2c2c8;
+  --color-gray-700: #d4d4d8;
+  --color-gray-800: #e4e4e7;
+  --color-gray-900: #f4f4f5;
+
+  /* 외곽 배경 / 폰 프레임 */
+  --color-zinc-900: #000000;
+  --color-zinc-800: #2a2a2e;
+
+  /* 옅은 액센트 배경 - 다크 톤에 어울리게 소폭 감광 */
+  --color-blue-50: #0f2748;
+  --color-blue-100: #163464;
+  --color-red-50: #3a1414;
+  --color-red-100: #4d1a1a;
+  --color-amber-50: #2e2108;
+  --color-amber-100: #3e2c0c;
+  --color-pink-50: #3a1220;
+  --color-green-50: #0f2a1c;
+  --color-green-100: #163d29;
 }
 
 @layer base {
@@ -30,7 +70,7 @@
   }
 }
 
-/* React Calendar */
+/* React Calendar - 라이트 */
 .react-calendar {
   border: none !important;
   font-family: inherit !important;
@@ -80,4 +120,46 @@
 }
 abbr[title] {
   text-decoration: none !important;
+}
+
+/* React Calendar - 다크 */
+.dark .react-calendar__tile {
+  color: #e4e4e7 !important;
+}
+.dark .react-calendar__tile:hover {
+  background: #2d2d31 !important;
+}
+.dark .react-calendar__tile--active {
+  background: #3b82f6 !important;
+  color: white !important;
+}
+.dark .react-calendar__tile--now {
+  background: #163464 !important;
+  color: #60a5fa !important;
+}
+.dark .react-calendar__tile:disabled {
+  color: #52525b !important;
+  background: transparent !important;
+}
+.dark .react-calendar__navigation button {
+  color: #e4e4e7 !important;
+}
+.dark .react-calendar__navigation button:hover,
+.dark .react-calendar__navigation button:focus {
+  background: #2d2d31 !important;
+}
+.dark .react-calendar__navigation button[disabled] {
+  background: transparent !important;
+  color: #52525b !important;
+}
+.dark .react-calendar__month-view__weekdays__weekday {
+  color: #8e8e95 !important;
+}
+.dark .react-calendar__month-view__days__day--neighboringMonth {
+  color: #52525b !important;
+}
+
+/* 다크 모드에서 input[type=date] 픽커 아이콘이 잘 보이도록 */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
 }

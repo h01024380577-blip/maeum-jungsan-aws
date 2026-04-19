@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useStore } from "@/src/store/useStore";
 import Onboarding from "@/src/components/Onboarding";
+import { ThemeProvider } from "@/src/lib/theme";
 
 const SKIP_ONBOARDING_PATHS = ['/terms', '/intro'];
 
-export default function Providers({ children }: { children: React.ReactNode }) {
+function InnerProviders({ children }: { children: React.ReactNode }) {
   const { loadFromSupabase, isLoaded, tossUserId } = useStore();
   const pathname = usePathname();
 
@@ -52,5 +53,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <Onboarding onComplete={handleOnboardingComplete} />
       )}
     </>
+  );
+}
+
+export default function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <ThemeProvider>
+      <InnerProviders>{children}</InnerProviders>
+    </ThemeProvider>
   );
 }

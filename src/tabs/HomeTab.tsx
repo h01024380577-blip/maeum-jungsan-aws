@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { apiFetch } from '@/src/lib/apiClient';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut, Sun, Moon, Monitor, Palette } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
+import { useTheme, ThemeMode } from '../lib/theme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 // 토스트는 useToast 훅으로 처리 (아래 컴포넌트에서 사용)
@@ -20,6 +21,63 @@ function parseAccount(account: string): { bank: string; accountNo: string } {
   const bank = parts[0] || '';
   const accountNo = parts[1] || '';
   return { bank, accountNo };
+}
+
+// 금액 추천 로직: 과거 이력·관계·장소를 분석해 상황별 문구 풀에서 매칭되는 구절을 랜덤 선택
+function recommendAmount(parsed: any, entries: EventEntry[]): { amt: number; reason: string } {
+  const samePast = entries.find(e => e.targetName === parsed.targetName && e.eventType === parsed.eventType);
+  const allPast = parsed.targetName ? entries.filter(e => e.targetName === parsed.targetName) : [];
+  const theyGaveMe = allPast.filter(e => e.isIncome).length;
+  const iGaveThem = allPast.filter(e => !e.isIncome).length;
+  const r: string = parsed.relation || '';
+  const isHotel = !!(parsed.location && (parsed.location.includes('호텔') || parsed.location.includes('컨벤션')));
+  const isClose = r.includes('가족') || r.includes('친척');
+  const isBestie = r.includes('절친');
+  const isPeer = r.includes('동료') || r.includes('친구');
+
+  let amt = 100000;
+  let pool: string[] = [];
+
+  if (samePast) {
+    try {
+      const d = parseISO(samePast.date);
+      if (!isNaN(d.getTime())) {
+        const years = Math.max(0, 2026 - d.getFullYear());
+        amt = samePast.amount * Math.pow(1.03, years);
+        pool = years >= 2
+          ? ['예전 금액을 현재 가치로 맞췄어요', '지난번 마음을 시세에 맞게 이어가요']
+          : ['지난번과 같은 마음으로 이어가요', '예전과 비슷한 금액으로 추천해요'];
+      }
+    } catch {}
+  } else if (theyGaveMe >= 2) {
+    amt = isClose ? 250000 : isBestie ? 200000 : 150000;
+    pool = ['나를 많이 챙겨줬던 소중한 분이에요', '오래도록 마음을 주셨던 분이에요', '고마운 인연을 이어가요'];
+  } else if (theyGaveMe === 1) {
+    amt = isClose ? 200000 : isBestie ? 150000 : isPeer ? 100000 : 70000;
+    pool = ['마음을 주셨던 분께 보답하는 뜻으로', '지난 호의를 기억하는 금액이에요'];
+  } else if (iGaveThem >= 2) {
+    amt = isClose ? 200000 : isBestie ? 150000 : isPeer ? 100000 : 50000;
+    pool = ['꾸준히 마음을 건네온 분이에요', '변함없이 이어가는 관계에 맞췄어요'];
+  } else if (allPast.length > 0) {
+    amt = isClose ? 200000 : isBestie ? 150000 : isPeer ? 100000 : 50000;
+    pool = ['오래 인연을 이어온 분이에요', '꾸준히 마음을 나눠온 사이에요'];
+  } else {
+    if (isClose) { amt = 200000; pool = ['가까운 가족 관계에 맞춘 금액이에요', '가족에게 건네기 좋은 마음이에요']; }
+    else if (isBestie) { amt = 150000; pool = ['절친 사이에 어울리는 금액이에요', '각별한 친구에게 맞춘 마음이에요']; }
+    else if (r.includes('동료')) { amt = 100000; pool = ['직장 동료에게 건네기 좋은 금액이에요', '동료 사이 평균값을 담았어요']; }
+    else if (r.includes('친구')) { amt = 100000; pool = ['친구 사이 평균적인 마음이에요', '친한 사이에 적당한 금액이에요']; }
+    else if (r.includes('지인')) { amt = 50000; pool = ['가벼운 인사 정도에 맞는 금액이에요', '예의를 표현하기 좋은 금액이에요']; }
+    else { amt = 100000; pool = ['아직 마음을 주고받은 기록이 없어요', '첫 기록이라 평균값으로 추천해요']; }
+
+    if (isHotel) {
+      amt += 50000;
+      pool = ['호텔 예식장 평균을 반영했어요', '고급 예식장에 맞춘 금액이에요'];
+    }
+  }
+
+  amt = Math.round(amt / 10000) * 10000;
+  const reason = pool[Math.floor(Math.random() * pool.length)] || '관계 기반 추천';
+  return { amt, reason };
 }
 
 // HTTP 환경에서도 동작하는 클립보드 복사
@@ -65,6 +123,7 @@ const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ?
 
 export default function HomeTab() {
   const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData } = useStore();
+  const { mode: themeMode, resolved: resolvedTheme, setMode: setThemeMode } = useTheme();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
   React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
@@ -192,20 +251,7 @@ export default function HomeTab() {
 
       const parsed = result.data;
 
-      let amt = 100000, reason = "통계 기반 평균";
-      const past = entries.find(e => e.targetName === parsed.targetName && e.eventType === parsed.eventType);
-      if (past) {
-        try { const d = parseISO(past.date); if (!isNaN(d.getTime())) { amt = past.amount * Math.pow(1.03, Math.max(0, 2026 - d.getFullYear())); reason = "물가 상승 반영"; } } catch {}
-      } else {
-        const r = parsed.relation || "";
-        if (r.includes('가족') || r.includes('친척')) amt = 200000;
-        else if (r.includes('절친')) amt = 150000;
-        else if (r.includes('동료') || r.includes('친구')) amt = 100000;
-        else if (r.includes('지인')) amt = 50000;
-        if (parsed.location?.includes('호텔')) amt += 50000;
-        reason = "관계 기반 추천";
-      }
-      amt = Math.round(amt / 10000) * 10000;
+      const { amt, reason } = recommendAmount(parsed, entries);
 
       const rawDate = parsed.date || format(new Date(), 'yyyy-MM-dd');
       // 날짜를 yyyy-MM-dd 형식으로 정규화
@@ -245,7 +291,7 @@ export default function HomeTab() {
   };
 
   const handleManualEntry = () => {
-    const d: any = { targetName: '', date: format(new Date(), 'yyyy-MM-dd'), eventType: 'wedding', location: '', relation: '', amount: 50000, type: 'EXPENSE', isIncome: false, recommendationReason: "직접 입력" };
+    const d: any = { targetName: '', date: format(new Date(), 'yyyy-MM-dd'), eventType: 'wedding', location: '', relation: '', amount: 0, type: 'EXPENSE', isIncome: false };
     setInputText(''); setInputUrl(''); setSelectedImage(null);
     setParsedData(d); setInitialParsedData(null); setShowBottomSheet(true);
   };
@@ -299,23 +345,24 @@ export default function HomeTab() {
       {/* Header */}
       <div className="px-5 pt-14 pb-6 bg-white">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-[22px] font-black text-gray-900 tracking-tight">마음정산 AI</h1>
+          {tossUserId ? (
+            <div className="flex items-center space-x-2 pl-1 pr-3.5 py-1 bg-gray-50 rounded-full border border-gray-100">
+              <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                <User size={13} className="text-blue-500" />
+              </div>
+              <span className="text-xs font-bold text-gray-800">{tossUserName ?? '로그인됨'}</span>
+            </div>
+          ) : (
+            <div className="h-9" />
+          )}
           <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
             <Settings size={20} />
           </button>
         </div>
 
-        {/* 로그인 상태 */}
-        {tossUserId && (
-          <div className="flex items-center space-x-2 mb-4 px-1">
-            <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center"><User size={14} className="text-blue-500" /></div>
-            <span className="text-xs font-bold text-gray-600">{tossUserName ?? '로그인됨'}</span>
-          </div>
-        )}
-
         {/* Hero Title */}
         <div className="text-center mb-8">
-          <h2 className="text-[28px] font-black text-gray-900 tracking-tight">스마트 분석</h2>
+          <h2 className="text-[28px] font-black text-gray-900 tracking-tight">마음정산 AI</h2>
           <p className="text-sm text-gray-400 mt-1">링크나 이미지만으로 경조사 정보를 자동 입력하세요</p>
         </div>
 
@@ -475,7 +522,7 @@ export default function HomeTab() {
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] max-h-[90dvh] bg-white rounded-t-[28px] px-4 py-5 sm:p-6 z-[70] shadow-2xl overflow-x-hidden flex flex-col">
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 shrink-0" />
               <div className="flex items-center justify-between mb-5 shrink-0">
-                <h3 className="text-lg font-black text-gray-900">분석 결과 확인</h3>
+                <h3 className="text-lg font-black text-gray-900">{initialParsedData ? '분석 결과 확인' : '직접 입력'}</h3>
                 <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center">{eventIcon(parsedData.eventType || 'other')}</div>
               </div>
 
@@ -499,18 +546,24 @@ export default function HomeTab() {
                 <Field label="관계" value={parsedData.relation} onChange={(v: string) => setParsedData({...parsedData, relation: v})} />
 
                 {/* Amount */}
-                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                <div className={`p-4 rounded-2xl border ${initialParsedData ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'}`}>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">{parsedData.recommendationReason}</span>
-                    <span className="text-[8px] font-black text-white bg-blue-500 px-2 py-0.5 rounded-full">AI 추천</span>
+                    {initialParsedData ? (
+                      <>
+                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">{parsedData.recommendationReason}</span>
+                        <span className="text-[8px] font-black text-white bg-blue-500 px-2 py-0.5 rounded-full">AI 추천</span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">금액</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 overflow-hidden">
-                    <input type="text" inputMode="numeric" value={parsedData.amount ? Number(parsedData.amount).toLocaleString() : ''} onChange={(e) => { const raw = e.target.value.replace(/[^0-9]/g, ''); setParsedData({...parsedData, amount: Number(raw) || 0}); }} autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className="flex-1 min-w-0 bg-transparent text-2xl font-black text-blue-700 outline-none" />
-                    <span className="text-base font-bold text-blue-500 shrink-0">원</span>
+                    <input type="text" inputMode="numeric" value={parsedData.amount ? Number(parsedData.amount).toLocaleString() : ''} onChange={(e) => { const raw = e.target.value.replace(/[^0-9]/g, ''); setParsedData({...parsedData, amount: Number(raw) || 0}); }} placeholder="0" autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} className={`flex-1 min-w-0 bg-transparent text-2xl font-black outline-none ${initialParsedData ? 'text-blue-700' : 'text-gray-900'}`} />
+                    <span className={`text-base font-bold shrink-0 ${initialParsedData ? 'text-blue-500' : 'text-gray-500'}`}>원</span>
                   </div>
                   <div className="flex space-x-1.5 sm:space-x-2 mt-3">
                     {[{ l: '-1만', d: -10000 }, { l: '+1만', d: 10000 }, { l: '+5만', d: 50000 }, { l: '+10만', d: 100000 }].map(b => (
-                      <button key={b.l} onClick={() => setParsedData({...parsedData, amount: Math.max(0, (parsedData.amount || 0) + b.d)})} className="flex-1 py-2 bg-white/70 hover:bg-white rounded-lg text-[10px] font-bold text-blue-600 border border-blue-100 transition-colors active:scale-95 min-w-0">{b.l}</button>
+                      <button key={b.l} onClick={() => setParsedData({...parsedData, amount: Math.max(0, (parsedData.amount || 0) + b.d)})} className={`flex-1 py-2 bg-white/70 hover:bg-white rounded-lg text-[10px] font-bold transition-colors active:scale-95 min-w-0 border ${initialParsedData ? 'text-blue-600 border-blue-100' : 'text-gray-600 border-gray-200'}`}>{b.l}</button>
                     ))}
                   </div>
                 </div>
@@ -646,6 +699,40 @@ export default function HomeTab() {
                     >
                       {notificationLoading ? '...' : notificationsEnabled ? '허용됨' : '허용하기'}
                     </button>
+                  </div>
+                </div>
+
+                {/* 화면 테마 */}
+                <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                      <Palette size={16} className="text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">화면 테마</p>
+                      <p className="text-[11px] text-gray-400">
+                        {themeMode === 'system' ? `시스템 설정 따름 · 현재 ${resolvedTheme === 'dark' ? '다크' : '라이트'}` : themeMode === 'dark' ? '다크 모드' : '라이트 모드'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex bg-white rounded-xl p-1 border border-gray-100">
+                    {([
+                      { key: 'light' as ThemeMode, label: '라이트', Icon: Sun },
+                      { key: 'dark' as ThemeMode, label: '다크', Icon: Moon },
+                      { key: 'system' as ThemeMode, label: '시스템', Icon: Monitor },
+                    ]).map(({ key, label, Icon }) => {
+                      const active = themeMode === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setThemeMode(key)}
+                          className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-[11px] font-bold transition-all active:scale-95 ${active ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                          <Icon size={14} />
+                          <span>{label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
