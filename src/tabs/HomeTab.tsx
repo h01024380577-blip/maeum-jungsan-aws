@@ -429,8 +429,8 @@ export default function HomeTab() {
         >
           {selectedImage ? (
             <div className="flex flex-col items-center space-y-3">
-              <div className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center animate-pulse">
-                <Sparkles size={28} className="text-white" />
+              <div className="w-14 h-14 rounded-2xl overflow-hidden animate-pulse">
+                <img src="/ai-loading-icon.png" alt="AI 분석 중" className="w-full h-full object-cover" />
               </div>
               <p className="text-sm font-bold text-blue-600">이미지 분석 중...</p>
               <p className="text-[11px] text-blue-400">잠시만 기다려 주세요</p>
