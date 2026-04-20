@@ -9,7 +9,7 @@ export default defineConfig({
   },
   web: {
     host: 'localhost',
-    port: 3000,
+    port: 3001,
     commands: {
       dev: 'next dev',
       build: 'npm run build:ait',

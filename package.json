@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "granite dev",
+    "dev": "granite dev --port 3001",
     "build": "granite build",
     "build:next": "prisma generate && next build",
     "build:csr": "NEXT_BUILD_CSR=1 prisma generate && next build",
