@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowLeft, User, Heart, Flower2, Cake, Star, ArrowUpRight, ArrowDownLeft, Calendar, MapPin, Trash2 } from 'lucide-react';
+import { ArrowLeft, User, Heart, Flower2, Cake, Star, ArrowUpRight, ArrowDownLeft, Calendar, MapPin, Trash2, Pencil, Check } from 'lucide-react';
 import { useStore, EventType } from '../store/useStore';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
+
+const RELATION_PRESETS = ['가족', '친척', '친구', '동료', '지인', '기타'] as const;
 
 const eventIcon = (t: EventType, size = 14) => {
   if (t === 'wedding') return <Heart size={size} className="text-pink-500 fill-pink-500" />;
@@ -18,12 +20,35 @@ const safeDate = (d: string) => {
 };
 
 export default function ContactDetail({ contactId, onBack }: { contactId: string; onBack: () => void }) {
-  const { contacts, entries, removeContact } = useStore();
+  const { contacts, entries, removeContact, updateContact } = useStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRelationEdit, setShowRelationEdit] = useState(false);
+  const [relationDraft, setRelationDraft] = useState('');
+  const [savingRelation, setSavingRelation] = useState(false);
   const contact = contacts.find(c => c.id === contactId);
   const ce = entries.filter(e => e.contactId === contactId);
 
   if (!contact) return null;
+
+  const openRelationEdit = () => {
+    setRelationDraft(contact.relation || '');
+    setShowRelationEdit(true);
+  };
+
+  const saveRelation = async () => {
+    const next = relationDraft.trim();
+    if (!next || next === contact.relation) {
+      setShowRelationEdit(false);
+      return;
+    }
+    setSavingRelation(true);
+    try {
+      await updateContact(contactId, { relation: next });
+      setShowRelationEdit(false);
+    } finally {
+      setSavingRelation(false);
+    }
+  };
 
   const given = ce.filter(e => e.type === 'EXPENSE').reduce((s, e) => s + e.amount, 0);
   const received = ce.filter(e => e.type === 'INCOME').reduce((s, e) => s + e.amount, 0);
@@ -79,9 +104,87 @@ export default function ContactDetail({ contactId, onBack }: { contactId: string
         </div>
         <div className="text-center">
           <h2 className="text-xl font-black text-gray-900">{contact.name}</h2>
-          <p className="text-xs font-bold text-blue-500 mt-0.5">{contact.relation}</p>
+          <button
+            onClick={openRelationEdit}
+            className="mt-1 inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-50 hover:bg-blue-100 active:scale-95 transition-all"
+            aria-label="관계 수정"
+          >
+            <span className="text-xs font-bold text-blue-500">{contact.relation || '관계 설정'}</span>
+            <Pencil size={10} className="text-blue-400" />
+          </button>
         </div>
       </div>
+
+      {/* 관계 편집 모달 */}
+      <AnimatePresence>
+        {showRelationEdit && (
+          <div className="fixed inset-0 bg-black/40 z-[100] flex items-end sm:items-center justify-center px-4" onClick={() => !savingRelation && setShowRelationEdit(false)}>
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 30, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 w-full max-w-[360px] space-y-4 shadow-xl"
+            >
+              <div className="text-center space-y-1">
+                <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                  <Pencil size={20} className="text-blue-500" />
+                </div>
+                <h3 className="text-base font-black text-gray-900">관계 수정</h3>
+                <p className="text-xs text-gray-400">
+                  <span className="font-bold text-gray-600">{contact.name}</span>님과의 관계를 선택하거나 직접 입력하세요
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 justify-center">
+                {RELATION_PRESETS.map(preset => (
+                  <button
+                    key={preset}
+                    onClick={() => setRelationDraft(preset)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${relationDraft === preset ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                type="text"
+                value={relationDraft}
+                onChange={(e) => setRelationDraft(e.target.value)}
+                placeholder="직접 입력 (예: 사촌, 선배)"
+                className="w-full px-4 py-3 bg-gray-50 rounded-xl text-sm font-medium outline-none border border-gray-100 focus:border-blue-300 focus:bg-white transition-all placeholder:text-gray-300"
+                maxLength={20}
+              />
+
+              <div className="flex space-x-2 pt-1">
+                <button
+                  onClick={() => setShowRelationEdit(false)}
+                  disabled={savingRelation}
+                  className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm active:scale-95 transition-all disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={saveRelation}
+                  disabled={savingRelation || !relationDraft.trim()}
+                  className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                >
+                  {savingRelation ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>저장</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Balance */}
       <div className="bg-white p-6 rounded-[28px] shadow-sm border border-gray-100 space-y-5">
