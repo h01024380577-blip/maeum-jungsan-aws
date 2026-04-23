@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { apiFetch } from '@/src/lib/apiClient';
-import CreditStatusBadge from '@/src/components/ads/CreditStatusBadge';
-import RewardedAdButton from '@/src/components/ads/RewardedAdButton';
+import CreditPill from '@/src/components/ads/CreditPill';
 import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut, Sun, Moon, Monitor, Palette } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { useTheme, ThemeMode } from '../lib/theme';
@@ -124,7 +123,7 @@ const eventIcon = (t: string, size = 14) => {
 const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ? '부고' : t === 'birthday' ? '생일' : '기타';
 
 export default function HomeTab() {
-  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData, refreshCredits, credits } = useStore();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData, refreshCredits } = useStore();
   const { mode: themeMode, resolved: resolvedTheme, setMode: setThemeMode } = useTheme();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
@@ -349,44 +348,29 @@ export default function HomeTab() {
 
       {/* Header */}
       <div className="px-5 pt-14 pb-6 bg-white">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 gap-2">
           {tossUserId ? (
-            <div className="flex items-center space-x-2 pl-1 pr-3.5 py-1 bg-gray-50 rounded-full border border-gray-100">
+            <div className="flex items-center space-x-2 pl-1 pr-3.5 py-1 bg-gray-50 rounded-full border border-gray-100 shrink-0">
               <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                 <User size={13} className="text-blue-500" />
               </div>
-              <span className="text-xs font-bold text-gray-800">{tossUserName ?? '로그인됨'}</span>
+              <span className="text-xs font-bold text-gray-800 truncate max-w-[80px]">{tossUserName ?? '로그인됨'}</span>
             </div>
           ) : (
             <div className="h-9" />
           )}
-          <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <Settings size={20} />
-          </button>
+          <div className="flex items-center gap-1.5 ml-auto">
+            <CreditPill variant="ai" />
+            <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+              <Settings size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Hero Title */}
         <div className="text-center mb-6">
           <h2 className="text-[28px] font-black text-gray-900 tracking-tight">마음정산 AI</h2>
           <p className="text-sm text-gray-400 mt-1">링크나 이미지만으로 경조사 정보를 자동 입력하세요</p>
-        </div>
-
-        {/* AI 크레딧 대시보드 */}
-        <div className="mb-6 px-1 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <CreditStatusBadge variant="ai" />
-          </div>
-          {credits.ai.balance === 0 && (
-            <div className="p-3.5 bg-amber-50 rounded-2xl space-y-2.5">
-              <p className="text-xs text-amber-800 leading-relaxed">
-                AI 분석 횟수를 다 썼어요. 광고를 보고 1회 더 받을까요?
-              </p>
-              <RewardedAdButton
-                rewardType="AI_CREDIT"
-                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-blue-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-none disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
-              />
-            </div>
-          )}
         </div>
 
         {/* Summary Cards */}

@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, Check, AlertCircle, Table as TableIcon } from 'lucide-react';
 import { parseCSVFile, cleanAmount, cleanDate, RawCSVData } from '../utils/csvParser';
 import { useStore, EventType } from '../store/useStore';
-import CreditStatusBadge from './ads/CreditStatusBadge';
-import RewardedAdButton from './ads/RewardedAdButton';
+import CreditPill from './ads/CreditPill';
 
 interface Props {
   isOpen: boolean;
@@ -145,28 +144,15 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
             exit={{ y: '100%' }}
             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white rounded-t-[32px] p-6 z-[110] shadow-2xl max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">대량 불러오기</h2>
-              <button onClick={onClose} disabled={isImporting} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <CreditStatusBadge variant="csv" />
-            </div>
-
-            {credits.csv.balance === 0 && (
-              <div className="mb-4 p-4 bg-amber-50 rounded-2xl space-y-3">
-                <div className="flex items-start space-x-3">
-                  <AlertCircle className="text-amber-600 mt-0.5 shrink-0" size={18} />
-                  <p className="text-xs text-amber-800 leading-relaxed">
-                    CSV 가져오기 횟수를 다 썼어요. 광고를 보고 1회 더 받을까요?
-                  </p>
-                </div>
-                <RewardedAdButton rewardType="CSV_CREDIT" className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-blue-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-none disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none" />
+            <div className="flex justify-between items-center mb-6 gap-2">
+              <h2 className="text-xl font-bold shrink-0">대량 불러오기</h2>
+              <div className="flex items-center gap-1.5 ml-auto">
+                <CreditPill variant="csv" />
+                <button onClick={onClose} disabled={isImporting} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30">
+                  <X size={20} />
+                </button>
               </div>
-            )}
+            </div>
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl flex items-center space-x-2 text-sm">

@@ -12,16 +12,16 @@ const VARIANTS = {
   ai: {
     Icon: Sparkles,
     label: 'AI 분석',
-    colorHigh: 'bg-blue-50 text-blue-700',
-    colorLow: 'bg-amber-50 text-amber-700',
-    colorZero: 'bg-gray-100 text-gray-500',
+    colorHigh: 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm shadow-blue-100',
+    colorLow: 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm shadow-amber-100',
+    colorZero: 'bg-gray-100 text-gray-500 border border-gray-200',
   },
   csv: {
     Icon: Upload,
-    label: 'CSV 가져오기',
-    colorHigh: 'bg-violet-50 text-violet-700',
-    colorLow: 'bg-amber-50 text-amber-700',
-    colorZero: 'bg-gray-100 text-gray-500',
+    label: 'CSV',
+    colorHigh: 'bg-violet-100 text-violet-700 border border-violet-200 shadow-sm shadow-violet-100',
+    colorLow: 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm shadow-amber-100',
+    colorZero: 'bg-gray-100 text-gray-500 border border-gray-200',
   },
 } as const;
 
@@ -39,12 +39,12 @@ export default function CreditStatusBadge({ variant, className }: Props) {
     <span
       className={
         className ??
-        `inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${tone}`
+        `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${tone}`
       }
     >
-      <Icon size={12} />
+      <Icon size={13} />
       <span>
-        {label} 남은 횟수 {slot.balance}회
+        {label} {slot.balance}회
       </span>
     </span>
   );

@@ -11,6 +11,8 @@ import type { RewardType } from '@prisma/client';
 interface Props {
   rewardType: RewardType;
   className?: string;
+  /** 기본 라벨 대신 표시할 텍스트 (헤더 등 좁은 공간용) */
+  label?: string;
   /** 성공 콜백 (크레딧 충전 완료 후) */
   onCharged?: (newBalance: number) => void;
 }
@@ -26,7 +28,7 @@ const LABELS: Record<RewardType, { idle: string; success: string }> = {
   },
 };
 
-export default function RewardedAdButton({ rewardType, className, onCharged }: Props) {
+export default function RewardedAdButton({ rewardType, className, label, onCharged }: Props) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const credits = useStore((s) => s.credits);
@@ -134,7 +136,7 @@ export default function RewardedAdButton({ rewardType, className, onCharged }: P
       ) : (
         <>
           <PlayCircle size={14} />
-          <span>{LABELS[rewardType].idle}</span>
+          <span>{label ?? LABELS[rewardType].idle}</span>
         </>
       )}
     </button>
