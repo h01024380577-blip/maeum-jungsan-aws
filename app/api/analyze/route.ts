@@ -7,6 +7,7 @@ import {
   resolveDbUserId,
   isGuardEnabled,
 } from '@/src/lib/credits';
+import { isTransientGeminiError, TRANSIENT_RESPONSE } from '@/src/lib/geminiHelpers';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -93,13 +94,17 @@ export async function POST(req: NextRequest) {
     return withCors(req, NextResponse.json({ success: true, data: JSON.parse(responseText) }));
 
   } catch (e: any) {
-    const isRateLimit = e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED');
-    if (isRateLimit && aiCreditUserId) {
+    const transient = isTransientGeminiError(e);
+    if (transient && aiCreditUserId) {
       await refundCredit(aiCreditUserId, 'AI_CREDIT');
     }
+    console.error('[analyze] error:', e?.message || e);
+    if (transient) {
+      return withCors(req, NextResponse.json(TRANSIENT_RESPONSE, { status: 503 }));
+    }
     return withCors(req, NextResponse.json(
-      { success: false, reason: isRateLimit ? 'rate_limit' : 'parse_error' },
-      { status: isRateLimit ? 429 : 500 }
+      { success: false, reason: 'parse_error' },
+      { status: 500 }
     ));
   }
 }

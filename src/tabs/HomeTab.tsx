@@ -242,6 +242,9 @@ export default function HomeTab() {
       if (!result.success) {
         if (result.reason === 'rate_limit') {
           toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
+        } else if (result.reason === 'temporarily_unavailable') {
+          toast.error(result.message || 'AI 서비스가 잠시 혼잡해요. 잠시 후 다시 시도해 주세요.');
+          refreshCredits();
         } else if (result.reason === 'no_credits') {
           toast.error('AI 분석 횟수를 모두 사용했어요. 광고를 보고 충전해 주세요.');
           refreshCredits();

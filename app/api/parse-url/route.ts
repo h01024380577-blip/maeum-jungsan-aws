@@ -6,8 +6,8 @@ import { corsResponse, withCors } from '@/src/lib/cors';
 import {
   parseAiResponse,
   calculateConfidence as calculateConfidenceFromFields,
-  isRateLimitError,
-  RATE_LIMIT_RESPONSE,
+  isTransientGeminiError,
+  TRANSIENT_RESPONSE,
 } from '@/src/lib/geminiHelpers';
 import {
   consumeCredit,
@@ -186,9 +186,9 @@ export async function POST(request: NextRequest) {
         }
       } catch (e: any) {
         console.error('[parse-url] Phase 1a error:', e?.message);
-        if (isRateLimitError(e)) {
+        if (isTransientGeminiError(e)) {
           if (aiCreditUserId) await refundCredit(aiCreditUserId, 'AI_CREDIT');
-          return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
+          return withCors(request, NextResponse.json(TRANSIENT_RESPONSE, { status: 503 }));
         }
       }
     }
@@ -219,9 +219,9 @@ ${OUTPUT_SCHEMA}`;
       }
     } catch (e: any) {
       console.error('[parse-url] Phase 2 (Jina) error:', e?.message);
-      if (isRateLimitError(e)) {
+      if (isTransientGeminiError(e)) {
         if (aiCreditUserId) await refundCredit(aiCreditUserId, 'AI_CREDIT');
-        return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
+        return withCors(request, NextResponse.json(TRANSIENT_RESPONSE, { status: 503 }));
       }
     }
 
@@ -246,9 +246,9 @@ ${OUTPUT_SCHEMA}`;
       return withCors(request, NextResponse.json({ success: true, data, confidence, source: 'url-context' }));
     } catch (e: any) {
       console.error('[parse-url] Phase 3 error:', e?.message);
-      if (isRateLimitError(e)) {
+      if (isTransientGeminiError(e)) {
         if (aiCreditUserId) await refundCredit(aiCreditUserId, 'AI_CREDIT');
-        return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
+        return withCors(request, NextResponse.json(TRANSIENT_RESPONSE, { status: 503 }));
       }
       return withCors(request, NextResponse.json(
         { success: false, reason: 'ai_failed', message: 'AI 분석에 실패했습니다.' },

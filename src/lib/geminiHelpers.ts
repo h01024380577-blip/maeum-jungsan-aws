@@ -42,9 +42,34 @@ export function isRateLimitError(err: unknown): boolean {
   return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
 }
 
+/**
+ * Gemini 일시적 장애(Transient). rate limit(429) + service unavailable(503) + overloaded.
+ * 이 에러는 사용자 잘못이 아니므로 크레딧을 환불해야 함.
+ */
+export function isTransientGeminiError(err: unknown): boolean {
+  const anyErr = err as { message?: string } | null;
+  const msg = anyErr?.message || JSON.stringify(err) || '';
+  return (
+    msg.includes('429') ||
+    msg.includes('503') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('UNAVAILABLE') ||
+    msg.includes('overloaded') ||
+    msg.includes('high demand') ||
+    msg.includes('quota')
+  );
+}
+
 /** 클라이언트에 반환할 rate limit 응답 객체. */
 export const RATE_LIMIT_RESPONSE = {
   success: false as const,
   reason: 'rate_limit' as const,
   message: '무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.',
+};
+
+/** AI 서비스 일시 장애 응답 (503/UNAVAILABLE 용). */
+export const TRANSIENT_RESPONSE = {
+  success: false as const,
+  reason: 'temporarily_unavailable' as const,
+  message: 'AI 서비스가 잠시 혼잡해요. 잠시 후 다시 시도해 주세요. (분석 횟수는 차감되지 않아요)',
 };
