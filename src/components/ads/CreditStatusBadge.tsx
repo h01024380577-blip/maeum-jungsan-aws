@@ -11,14 +11,14 @@ interface Props {
 const VARIANTS = {
   ai: {
     Icon: Sparkles,
-    label: 'AI 분석',
+    label: 'AI분석 남은 횟수',
     colorHigh: 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm shadow-blue-100',
     colorLow: 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm shadow-amber-100',
     colorZero: 'bg-gray-100 text-gray-500 border border-gray-200',
   },
   csv: {
     Icon: Upload,
-    label: 'CSV',
+    label: '남은 횟수',
     colorHigh: 'bg-violet-100 text-violet-700 border border-violet-200 shadow-sm shadow-violet-100',
     colorLow: 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm shadow-amber-100',
     colorZero: 'bg-gray-100 text-gray-500 border border-gray-200',
