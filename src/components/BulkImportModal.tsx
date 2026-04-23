@@ -154,9 +154,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
 
             <div className="flex items-center justify-between gap-2 mb-4">
               <CreditStatusBadge variant="csv" />
-              {credits.csv.balance === 0 && credits.csv.canWatchAd && (
-                <RewardedAdButton rewardType="CSV_CREDIT" />
-              )}
+              <RewardedAdButton rewardType="CSV_CREDIT" />
             </div>
 
             {credits.csv.balance === 0 && (
