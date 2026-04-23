@@ -124,7 +124,7 @@ const eventIcon = (t: string, size = 14) => {
 const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ? '부고' : t === 'birthday' ? '생일' : '기타';
 
 export default function HomeTab() {
-  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData, refreshCredits } = useStore();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData, refreshCredits, credits } = useStore();
   const { mode: themeMode, resolved: resolvedTheme, setMode: setThemeMode } = useTheme();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
@@ -372,9 +372,21 @@ export default function HomeTab() {
         </div>
 
         {/* AI 크레딧 대시보드 */}
-        <div className="flex items-center justify-between gap-2 mb-6 px-1">
-          <CreditStatusBadge variant="ai" />
-          <RewardedAdButton rewardType="AI_CREDIT" />
+        <div className="mb-6 px-1 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <CreditStatusBadge variant="ai" />
+          </div>
+          {credits.ai.balance === 0 && (
+            <div className="p-3.5 bg-amber-50 rounded-2xl space-y-2.5">
+              <p className="text-xs text-amber-800 leading-relaxed">
+                AI 분석 횟수를 다 썼어요. 광고를 보고 1회 더 받을까요?
+              </p>
+              <RewardedAdButton
+                rewardType="AI_CREDIT"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-blue-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-none disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+              />
+            </div>
+          )}
         </div>
 
         {/* Summary Cards */}

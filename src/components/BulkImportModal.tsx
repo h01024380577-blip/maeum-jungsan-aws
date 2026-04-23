@@ -154,16 +154,17 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
 
             <div className="flex items-center justify-between gap-2 mb-4">
               <CreditStatusBadge variant="csv" />
-              <RewardedAdButton rewardType="CSV_CREDIT" />
             </div>
 
             {credits.csv.balance === 0 && (
-              <div className="mb-4 p-4 bg-amber-50 rounded-2xl flex items-start space-x-3">
-                <AlertCircle className="text-amber-600 mt-0.5" size={18} />
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  CSV 가져오기 횟수를 모두 사용했어요. 위의 광고를 보고 1회 충전할 수 있어요.
-                  (하루 광고 시청 한도를 모두 쓰면 내일 다시 받을 수 있어요.)
-                </p>
+              <div className="mb-4 p-4 bg-amber-50 rounded-2xl space-y-3">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="text-amber-600 mt-0.5 shrink-0" size={18} />
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    CSV 가져오기 횟수를 다 썼어요. 광고를 보고 1회 더 받을까요?
+                  </p>
+                </div>
+                <RewardedAdButton rewardType="CSV_CREDIT" className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-blue-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-none disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none" />
               </div>
             )}
 
