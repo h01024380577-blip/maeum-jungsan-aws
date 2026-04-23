@@ -366,9 +366,15 @@ export default function HomeTab() {
         </div>
 
         {/* Hero Title */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h2 className="text-[28px] font-black text-gray-900 tracking-tight">마음정산 AI</h2>
           <p className="text-sm text-gray-400 mt-1">링크나 이미지만으로 경조사 정보를 자동 입력하세요</p>
+        </div>
+
+        {/* AI 크레딧 대시보드 */}
+        <div className="flex items-center justify-between gap-2 mb-6 px-1">
+          <CreditStatusBadge variant="ai" />
+          <RewardedAdButton rewardType="AI_CREDIT" />
         </div>
 
         {/* Summary Cards */}
@@ -479,12 +485,6 @@ export default function HomeTab() {
               {isParsing ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Sparkles size={14} className="text-blue-400" /><span>텍스트 분석하기</span></>}
             </button>
           )}
-        </div>
-
-        {/* AI 크레딧 배지 + 광고 충전 */}
-        <div className="flex items-center justify-between gap-2 px-1">
-          <CreditStatusBadge variant="ai" />
-          <RewardedAdButton rewardType="AI_CREDIT" />
         </div>
 
         {/* Manual Entry */}
