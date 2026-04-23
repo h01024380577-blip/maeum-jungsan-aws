@@ -36,13 +36,27 @@ export default function RewardedAdButton({ rewardType, className, onCharged }: P
     isRewardedAdSupported().then(setSupported);
   }, []);
 
-  if (supported === false) return null;
-
   const slot = rewardType === 'AI_CREDIT' ? credits.ai : credits.csv;
-  const disabled = busy || supported === null || !slot.canWatchAd;
+  const disabled = busy || !supported || !slot.canWatchAd;
 
   const handleClick = async () => {
-    if (disabled) return;
+    if (busy) return;
+    if (supported === false) {
+      toast.message('이 버전에서는 광고가 지원되지 않아요. 토스 앱을 최신 버전으로 업데이트해 주세요.');
+      return;
+    }
+    if (supported === null) {
+      toast.message('광고 모듈을 준비 중이에요. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+    if (slot.balance >= slot.cap) {
+      toast.message(`크레딧이 가득 찼어요 (최대 ${slot.cap}회).`);
+      return;
+    }
+    if (!slot.canWatchAd) {
+      toast.message('오늘 광고 시청을 모두 사용했어요. 내일 다시 받을 수 있어요.');
+      return;
+    }
     setBusy(true);
     try {
       // 1) 서버에서 nonce 발급
