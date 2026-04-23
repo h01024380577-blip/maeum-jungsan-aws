@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { corsResponse, withCors } from '@/src/lib/cors';
+import {
+  consumeCredit,
+  refundCredit,
+  resolveDbUserId,
+  isGuardEnabled,
+} from '@/src/lib/credits';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -28,6 +34,26 @@ Respond ONLY with valid JSON, no markdown.`;
 
 export async function POST(req: NextRequest) {
   const { type, data } = await req.json();
+
+  // AI 크레딧 가드 (env로 on/off)
+  // type === 'url'인 경우는 내부적으로 /api/parse-url을 호출하므로 거기서 차감되게 중복 방지
+  let aiCreditUserId: string | null = null;
+  if (isGuardEnabled('AI_CREDIT') && type !== 'url') {
+    aiCreditUserId = await resolveDbUserId(req);
+    if (!aiCreditUserId) {
+      return withCors(req, NextResponse.json(
+        { success: false, reason: 'unauthorized' },
+        { status: 401 },
+      ));
+    }
+    const consumed = await consumeCredit(aiCreditUserId, 'AI_CREDIT');
+    if (!consumed) {
+      return withCors(req, NextResponse.json(
+        { success: false, reason: 'no_credits', rewardType: 'AI_CREDIT' },
+        { status: 402 },
+      ));
+    }
+  }
 
   try {
     let responseText = '{}';
@@ -68,6 +94,9 @@ export async function POST(req: NextRequest) {
 
   } catch (e: any) {
     const isRateLimit = e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED');
+    if (isRateLimit && aiCreditUserId) {
+      await refundCredit(aiCreditUserId, 'AI_CREDIT');
+    }
     return withCors(req, NextResponse.json(
       { success: false, reason: isRateLimit ? 'rate_limit' : 'parse_error' },
       { status: isRateLimit ? 429 : 500 }

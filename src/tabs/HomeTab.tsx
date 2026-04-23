@@ -1,5 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { apiFetch } from '@/src/lib/apiClient';
+import CreditStatusBadge from '@/src/components/ads/CreditStatusBadge';
+import RewardedAdButton from '@/src/components/ads/RewardedAdButton';
 import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut, Sun, Moon, Monitor, Palette } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { useTheme, ThemeMode } from '../lib/theme';
@@ -122,7 +124,7 @@ const eventIcon = (t: string, size = 14) => {
 const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ? '부고' : t === 'birthday' ? '생일' : '기타';
 
 export default function HomeTab() {
-  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData } = useStore();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData, refreshCredits } = useStore();
   const { mode: themeMode, resolved: resolvedTheme, setMode: setThemeMode } = useTheme();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
@@ -241,6 +243,9 @@ export default function HomeTab() {
       if (!result.success) {
         if (result.reason === 'rate_limit') {
           toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
+        } else if (result.reason === 'no_credits') {
+          toast.error('AI 분석 횟수를 모두 사용했어요. 광고를 보고 충전해 주세요.');
+          refreshCredits();
         } else {
           toast.error('분석 실패. 직접 입력을 이용해 주세요.');
         }
@@ -474,6 +479,12 @@ export default function HomeTab() {
               {isParsing ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Sparkles size={14} className="text-blue-400" /><span>텍스트 분석하기</span></>}
             </button>
           )}
+        </div>
+
+        {/* AI 크레딧 배지 + 광고 충전 */}
+        <div className="flex items-center justify-between gap-2 px-1">
+          <CreditStatusBadge variant="ai" />
+          <RewardedAdButton rewardType="AI_CREDIT" />
         </div>
 
         {/* Manual Entry */}

@@ -9,20 +9,62 @@ datasource db {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  tossUserKey     String?   @unique
-  name            String?   // 복호화된 이름 (복호화 키 없으면 null)
-  accessToken     String?
-  refreshToken    String?
-  tokenExpiresAt  DateTime?
-  scopes               String?   // space-separated scope list
+  id                   String    @id @default(cuid())
+  tossUserKey          String?   @unique
+  name                 String? // 복호화된 이름 (복호화 키 없으면 null)
+  accessToken          String?
+  refreshToken         String?
+  tokenExpiresAt       DateTime?
+  scopes               String? // space-separated scope list
   notificationsEnabled Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @default(now()) @updatedAt
+
+  // 크레딧 시스템 (2026-04-23 도입)
+  aiCredits        Int      @default(5) // AI 분석 영구 잔고, 웰컴 5회
+  csvImportCredits Int      @default(1) // CSV 가져오기 영구 잔고, 웰컴 1회
+  adWatchesToday   Int      @default(0) // 오늘 본 리워드 광고 횟수 (AI/CSV 공용)
+  adWatchesResetAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   contacts     Contact[]
   events       Event[]
   transactions Transaction[]
+  rewardGrants AdRewardGrant[]
+}
+
+enum RewardType {
+  AI_CREDIT
+  CSV_CREDIT
+}
+
+enum GrantStatus {
+  ISSUED
+  REDEEMED
+  EXPIRED
+  REJECTED
+}
+
+model AdRewardGrant {
+  id           String      @id @default(cuid())
+  userId       String
+  adGroupId    String
+  rewardNonce  String      @unique
+  rewardType   RewardType
+  rewardAmount Int
+  status       GrantStatus @default(ISSUED)
+  issuedAt     DateTime    @default(now())
+  redeemedAt   DateTime?
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([rewardNonce])
+  @@index([issuedAt])
+  @@index([userId, rewardType])
 }
 
 model Contact {

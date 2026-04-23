@@ -9,6 +9,12 @@ import {
   isRateLimitError,
   RATE_LIMIT_RESPONSE,
 } from '@/src/lib/geminiHelpers';
+import {
+  consumeCredit,
+  refundCredit,
+  resolveDbUserId,
+  isGuardEnabled,
+} from '@/src/lib/credits';
 
 export async function OPTIONS(req: NextRequest) {
   return corsResponse(req);
@@ -122,6 +128,25 @@ export async function POST(request: NextRequest) {
       ));
     }
 
+    // AI 크레딧 가드 (env로 on/off)
+    let aiCreditUserId: string | null = null;
+    if (isGuardEnabled('AI_CREDIT')) {
+      aiCreditUserId = await resolveDbUserId(request);
+      if (!aiCreditUserId) {
+        return withCors(request, NextResponse.json(
+          { success: false, reason: 'unauthorized' },
+          { status: 401 },
+        ));
+      }
+      const consumed = await consumeCredit(aiCreditUserId, 'AI_CREDIT');
+      if (!consumed) {
+        return withCors(request, NextResponse.json(
+          { success: false, reason: 'no_credits', rewardType: 'AI_CREDIT' },
+          { status: 402 },
+        ));
+      }
+    }
+
     const ai = new GoogleGenAI({ apiKey });
 
     // ========== Phase 1: 서버사이드 HTML 파싱 ==========
@@ -162,6 +187,7 @@ export async function POST(request: NextRequest) {
       } catch (e: any) {
         console.error('[parse-url] Phase 1a error:', e?.message);
         if (isRateLimitError(e)) {
+          if (aiCreditUserId) await refundCredit(aiCreditUserId, 'AI_CREDIT');
           return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
         }
       }
@@ -194,6 +220,7 @@ ${OUTPUT_SCHEMA}`;
     } catch (e: any) {
       console.error('[parse-url] Phase 2 (Jina) error:', e?.message);
       if (isRateLimitError(e)) {
+        if (aiCreditUserId) await refundCredit(aiCreditUserId, 'AI_CREDIT');
         return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
       }
     }
@@ -220,6 +247,7 @@ ${OUTPUT_SCHEMA}`;
     } catch (e: any) {
       console.error('[parse-url] Phase 3 error:', e?.message);
       if (isRateLimitError(e)) {
+        if (aiCreditUserId) await refundCredit(aiCreditUserId, 'AI_CREDIT');
         return withCors(request, NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 }));
       }
       return withCors(request, NextResponse.json(

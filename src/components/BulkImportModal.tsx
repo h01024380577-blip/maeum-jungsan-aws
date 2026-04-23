@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, Check, AlertCircle, Table as TableIcon } from 'lucide-react';
 import { parseCSVFile, cleanAmount, cleanDate, RawCSVData } from '../utils/csvParser';
 import { useStore, EventType } from '../store/useStore';
+import CreditStatusBadge from './ads/CreditStatusBadge';
+import RewardedAdButton from './ads/RewardedAdButton';
 
 interface Props {
   isOpen: boolean;
@@ -10,7 +12,7 @@ interface Props {
 }
 
 export default function BulkImportModal({ isOpen, onClose }: Props) {
-  const { bulkAddEntries } = useStore();
+  const { bulkAddEntries, refreshCredits, credits } = useStore();
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview'>('upload');
   const [csvData, setCsvData] = useState<RawCSVData | null>(null);
   const [transactionType, setTransactionType] = useState<'INCOME' | 'EXPENSE'>('INCOME');
@@ -25,6 +27,11 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 모달 오픈 시 최신 크레딧 상태 동기화
+  useEffect(() => {
+    if (isOpen) refreshCredits();
+  }, [isOpen, refreshCredits]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,12 +92,20 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
       setError('가져올 유효한 데이터가 없습니다.');
       return;
     }
-    
+
     setIsImporting(true);
     try {
-      await bulkAddEntries(processed as any);
+      const result = await bulkAddEntries(processed as any);
+      setError(null);
       onClose();
       reset();
+      return result;
+    } catch (err: any) {
+      if (err?.status === 402 || err?.reason === 'no_credits') {
+        setError('CSV 가져오기 횟수를 모두 사용했어요. 아래 버튼으로 광고를 보고 충전해 주세요.');
+      } else {
+        setError(err?.message || '가져오기에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      }
     } finally {
       setIsImporting(false);
     }
@@ -130,12 +145,29 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
             exit={{ y: '100%' }}
             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white rounded-t-[32px] p-6 z-[110] shadow-2xl max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">대량 불러오기</h2>
               <button onClick={onClose} disabled={isImporting} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30">
                 <X size={20} />
               </button>
             </div>
+
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <CreditStatusBadge variant="csv" />
+              {credits.csv.balance === 0 && credits.csv.canWatchAd && (
+                <RewardedAdButton rewardType="CSV_CREDIT" />
+              )}
+            </div>
+
+            {credits.csv.balance === 0 && (
+              <div className="mb-4 p-4 bg-amber-50 rounded-2xl flex items-start space-x-3">
+                <AlertCircle className="text-amber-600 mt-0.5" size={18} />
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  CSV 가져오기 횟수를 모두 사용했어요. 위의 광고를 보고 1회 충전할 수 있어요.
+                  (하루 광고 시청 한도를 모두 쓰면 내일 다시 받을 수 있어요.)
+                </p>
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl flex items-center space-x-2 text-sm">
@@ -298,14 +330,16 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                   </button>
                   <button
                     onClick={handleImport}
-                    disabled={isImporting}
-                    className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    disabled={isImporting || credits.csv.balance === 0}
+                    className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
                     {isImporting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         <span>등록 중...</span>
                       </>
+                    ) : credits.csv.balance === 0 ? (
+                      <span>횟수 부족</span>
                     ) : (
                       <span>일괄 등록하기</span>
                     )}

@@ -36,6 +36,23 @@ export interface EventEntry {
   userId: string;
 }
 
+export interface CreditSlot {
+  balance: number;
+  cap: number;
+  canWatchAd: boolean;
+}
+
+export interface CreditsState {
+  ai: CreditSlot;
+  csv: CreditSlot;
+  ad: {
+    watchesRemaining: number;
+    dailyLimit: number;
+    resetAt: string | null;
+  };
+  loaded: boolean;
+}
+
 interface AppState {
   entries: EventEntry[];
   contacts: Contact[];
@@ -44,6 +61,7 @@ interface AppState {
   tossUserId: string | null;
   tossUserName: string | null;
   notificationsEnabled: boolean;
+  credits: CreditsState;
   analysisResult: {
     data: Partial<EventEntry> | null;
     initialData: Partial<EventEntry> | null;
@@ -60,7 +78,8 @@ interface AppState {
   removeContact: (id: string) => Promise<void>;
   syncContacts: (contacts: Omit<Contact, 'id' | 'userId'>[]) => Promise<void>;
   addFeedback: (original: any, corrected: any) => void;
-  bulkAddEntries: (entries: Omit<EventEntry, 'id' | 'createdAt' | 'userId'>[]) => Promise<void>;
+  bulkAddEntries: (entries: Omit<EventEntry, 'id' | 'createdAt' | 'userId'>[]) => Promise<{ inserted: number }>;
+  refreshCredits: () => Promise<void>;
   clearData: () => void;
   setNotificationsEnabled: (enabled: boolean) => void;
   setAnalysisResult: (result: Partial<AppState['analysisResult']>) => void;
@@ -76,6 +95,12 @@ export const useStore = create<AppState>()((set, get) => ({
   tossUserId: null,
   tossUserName: null,
   notificationsEnabled: false,
+  credits: {
+    ai: { balance: 0, cap: 10, canWatchAd: false },
+    csv: { balance: 0, cap: 3, canWatchAd: false },
+    ad: { watchesRemaining: 0, dailyLimit: 5, resetAt: null },
+    loaded: false,
+  },
   analysisResult: {
     data: null,
     initialData: null,
@@ -84,14 +109,33 @@ export const useStore = create<AppState>()((set, get) => ({
     selectedImage: null,
   },
 
+  refreshCredits: async () => {
+    try {
+      const res = await apiFetch('/api/credits');
+      if (!res.ok) return;
+      const data = await res.json();
+      set({
+        credits: {
+          ai: data.ai,
+          csv: data.csv,
+          ad: data.ad,
+          loaded: true,
+        },
+      });
+    } catch {
+      // 네트워크 실패 시 기존 상태 유지
+    }
+  },
+
   // API Route 기반 데이터 로드 (로그인 상태에서만)
   loadFromSupabase: async () => {
     try {
       // 로그인 여부 먼저 확인
       const meRes = await apiFetch('/api/auth/me');
       if (!meRes.ok) {
-        // 비로그인: 데이터 비우고 로드 완료
+        // 비로그인(게스트): 데이터 비우고 크레딧만 동기화
         set({ entries: [], contacts: [], tossUserId: null, tossUserName: null, notificationsEnabled: false, isLoaded: true });
+        get().refreshCredits();
         return;
       }
       const me = await meRes.json();
@@ -114,6 +158,8 @@ export const useStore = create<AppState>()((set, get) => ({
         contacts: contactsRes.contacts ?? [],
         isLoaded: true,
       });
+      // 크레딧 상태는 독립적으로 로드 (실패해도 전체 실패 아님)
+      get().refreshCredits();
     } catch {
       set({ isLoaded: true });
     }
@@ -187,7 +233,34 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   bulkAddEntries: async (entries) => {
-    for (const e of entries) await get().addEntry(e);
+    const res = await apiFetch('/api/entries/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ entries }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      // 402 no_credits는 호출자가 광고 유도 UI로 분기할 수 있도록 구조화된 에러
+      const e = new Error(err.reason || err.error || 'bulk_failed') as Error & {
+        status?: number;
+        reason?: string;
+      };
+      e.status = res.status;
+      e.reason = err.reason;
+      throw e;
+    }
+    const json = await res.json();
+    // 서버 insert 성공 후 entries/contacts 재로드
+    const [entriesRes, contactsRes] = await Promise.all([
+      apiFetch('/api/entries').then((r) => (r.ok ? r.json() : { entries: [] })),
+      apiFetch('/api/contacts').then((r) => (r.ok ? r.json() : { contacts: [] })),
+    ]);
+    set({
+      entries: entriesRes.entries ?? [],
+      contacts: contactsRes.contacts ?? [],
+    });
+    // CSV 크레딧 차감 반영
+    get().refreshCredits();
+    return { inserted: json.inserted ?? 0 };
   },
 
   addFeedback: (original, corrected) =>
