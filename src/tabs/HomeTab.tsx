@@ -351,23 +351,21 @@ export default function HomeTab() {
 
       {/* Header */}
       <div className="px-5 pt-14 pb-6 bg-white">
-        <div className="flex items-center justify-between mb-8 gap-2">
+        <div className="flex items-center mb-8 gap-2">
           {tossUserId ? (
             <div className="flex items-center space-x-2 pl-1 pr-3.5 py-1 bg-gray-50 rounded-full border border-gray-100 shrink-0">
               <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                 <User size={13} className="text-blue-500" />
               </div>
-              <span className="text-xs font-bold text-gray-800 truncate max-w-[80px]">{tossUserName ?? '로그인됨'}</span>
+              <span className="text-xs font-bold text-gray-800 truncate max-w-[64px]">{tossUserName ?? '로그인됨'}</span>
             </div>
           ) : (
             <div className="h-9" />
           )}
-          <div className="flex items-center gap-1.5 ml-auto">
-            <CreditPill variant="ai" />
-            <button onClick={() => setShowSettings(true)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-              <Settings size={20} />
-            </button>
-          </div>
+          <CreditPill variant="ai" />
+          <button onClick={() => setShowSettings(true)} className="ml-auto p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <Settings size={20} />
+          </button>
         </div>
 
         {/* Hero Title */}
