@@ -8,6 +8,8 @@ import {
   calculateConfidence as calculateConfidenceFromFields,
   isTransientGeminiError,
   TRANSIENT_RESPONSE,
+  hasMeaningfulData,
+  LOW_CONFIDENCE_RESPONSE,
 } from '@/src/lib/geminiHelpers';
 import {
   consumeCredit,
@@ -242,6 +244,13 @@ ${OUTPUT_SCHEMA}`;
       });
       const data = normalizeData(parseAiResponse(response.text || '{}'));
       const confidence = calculateConfidence(data);
+
+      // 핵심 필드(targetName/date/location)가 모두 비어있다면 사용자에게
+      // 아무 가치도 없는 결과이므로 크레딧 환불 + 명시 응답.
+      if (!hasMeaningfulData(data)) {
+        if (aiCreditUserId) await refundCredit(aiCreditUserId, 'AI_CREDIT');
+        return withCors(request, NextResponse.json(LOW_CONFIDENCE_RESPONSE, { status: 200 }));
+      }
 
       return withCors(request, NextResponse.json({ success: true, data, confidence, source: 'url-context' }));
     } catch (e: any) {

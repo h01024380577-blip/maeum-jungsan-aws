@@ -73,3 +73,22 @@ export const TRANSIENT_RESPONSE = {
   reason: 'temporarily_unavailable' as const,
   message: 'AI 서비스가 잠시 혼잡해요. 잠시 후 다시 시도해 주세요. (분석 횟수는 차감되지 않아요)',
 };
+
+/**
+ * 파싱 결과가 "유의미한 정보를 하나라도" 담고 있는지 판정.
+ * targetName / date / location 중 최소 1개가 채워져야 true.
+ * 전부 비어있으면 사용자에게 아무 도움도 안 되므로 크레딧 환불 대상.
+ */
+export function hasMeaningfulData(data: unknown): boolean {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  const fields = [d.targetName, d.date, d.location];
+  return fields.some((v) => typeof v === 'string' && v.trim() !== '');
+}
+
+/** 유의미 필드 0개로 파싱이 사실상 실패한 경우의 사용자 응답. */
+export const LOW_CONFIDENCE_RESPONSE = {
+  success: false as const,
+  reason: 'low_confidence' as const,
+  message: '초대장 정보를 충분히 읽지 못했어요. 직접 입력을 이용해 주세요. (분석 횟수는 차감되지 않아요)',
+};

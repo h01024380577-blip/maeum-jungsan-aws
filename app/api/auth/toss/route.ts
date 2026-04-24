@@ -86,8 +86,18 @@ export async function POST(req: NextRequest) {
       tokenExpiresAt,
       scopes: stringifyScopes(scopes),
     },
-    select: { id: true },
+    select: { id: true, createdAt: true },
   });
+
+  // 파밍 감사 로그: 방금 생성된 계정이면 IP/UA 기록
+  // (재가입 패턴, 동일 IP 다수 계정 생성 등 사후 추적용)
+  if (Date.now() - user.createdAt.getTime() < 5000) {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const ua = (req.headers.get('user-agent') || 'unknown').slice(0, 120);
+    console.info(
+      `[audit] new_login_user id=${user.id} userKey=${userKey} ip=${ip} ua=${ua}`,
+    );
+  }
 
   // JWT 발급 (CSR 모드용)
   const token = signJwt({ userId: user.id, userKey: String(userKey) });

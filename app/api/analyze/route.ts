@@ -7,7 +7,12 @@ import {
   resolveDbUserId,
   isGuardEnabled,
 } from '@/src/lib/credits';
-import { isTransientGeminiError, TRANSIENT_RESPONSE } from '@/src/lib/geminiHelpers';
+import {
+  isTransientGeminiError,
+  TRANSIENT_RESPONSE,
+  hasMeaningfulData,
+  LOW_CONFIDENCE_RESPONSE,
+} from '@/src/lib/geminiHelpers';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -104,7 +109,13 @@ export async function POST(req: NextRequest) {
       return withCors(req, NextResponse.json(body, { status: res.status }));
     }
 
-    return withCors(req, NextResponse.json({ success: true, data: JSON.parse(responseText) }));
+    const parsedData = JSON.parse(responseText);
+    // 핵심 필드 모두 비어있으면 환불 + low_confidence 응답
+    if (!hasMeaningfulData(parsedData)) {
+      if (aiCreditUserId) await refundCredit(aiCreditUserId, 'AI_CREDIT');
+      return withCors(req, NextResponse.json(LOW_CONFIDENCE_RESPONSE, { status: 200 }));
+    }
+    return withCors(req, NextResponse.json({ success: true, data: parsedData }));
 
   } catch (e: any) {
     const transient = isTransientGeminiError(e);

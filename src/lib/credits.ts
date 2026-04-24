@@ -107,8 +107,12 @@ export async function ensureUserRecord(
     where: { tossUserKey: userId },
     update: {},
     create: { tossUserKey: userId },
-    select: { id: true },
+    select: { id: true, createdAt: true },
   });
+  // 파밍 감사 로그: 방금 생성된 게스트 계정을 기록 (디바이스 ID 포함)
+  if (Date.now() - user.createdAt.getTime() < 5000) {
+    console.info(`[audit] new_guest_user id=${user.id} deviceId=${userId}`);
+  }
   return user.id;
 }
 
