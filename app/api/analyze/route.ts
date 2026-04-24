@@ -83,12 +83,25 @@ export async function POST(req: NextRequest) {
 
     } else if (type === 'url') {
       const base = process.env.APP_URL ?? 'http://localhost:3000';
+      // 원본 요청의 인증 컨텍스트(JWT/쿠키/x-user-id)를 parse-url로 전달해야
+      // 크레딧 가드가 정상 동작한다. 헤더 누락 시 parse-url이 401로 튕겨
+      // 차감도 환불도 일어나지 않음.
+      const fwdHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      const auth = req.headers.get('authorization');
+      if (auth) fwdHeaders['Authorization'] = auth;
+      const cookie = req.headers.get('cookie');
+      if (cookie) fwdHeaders['Cookie'] = cookie;
+      const xUserId = req.headers.get('x-user-id');
+      if (xUserId) fwdHeaders['x-user-id'] = xUserId;
+
       const res = await fetch(`${base}/api/parse-url`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: fwdHeaders,
         body: JSON.stringify({ url: data }),
       });
-      return withCors(req, NextResponse.json(await res.json()));
+      const body = await res.json();
+      // 실패 상태 코드도 그대로 전달해야 클라가 reason별 UX 분기 가능
+      return withCors(req, NextResponse.json(body, { status: res.status }));
     }
 
     return withCors(req, NextResponse.json({ success: true, data: JSON.parse(responseText) }));
