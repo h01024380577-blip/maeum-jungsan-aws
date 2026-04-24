@@ -1,0 +1,17 @@
+{
+  "appName": "maeum-jungsan",
+  "permissions": [
+    {
+      "name": "clipboard",
+      "access": "read"
+    },
+    {
+      "name": "clipboard",
+      "access": "write"
+    },
+    {
+      "name": "contacts",
+      "access": "read"
+    }
+  ]
+}

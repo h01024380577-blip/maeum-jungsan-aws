@@ -1,0 +1,8 @@
+{
+  "terminal.integrated.focusAfterRun": "terminal",
+  "accessibility.signals.terminalBell": {
+    "sound": "on",
+    "announcement": "auto"
+  },
+  "terminal.integrated.enableVisualBell": true
+}

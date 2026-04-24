@@ -4,13 +4,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ChevronLeft,
   Bell,
   Palette,
   HelpCircle,
   MessageSquare,
   Info,
   LogOut,
+  LogIn,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStore } from '@/src/store/useStore';
@@ -20,10 +20,15 @@ import { apiFetch } from '@/src/lib/apiClient';
 import ProfileCard from '@/src/components/mypage/ProfileCard';
 import CreditOverview from '@/src/components/mypage/CreditOverview';
 import SettingsRow from '@/src/components/mypage/SettingsRow';
+import StatsOverview from '@/src/components/mypage/StatsOverview';
 import ThemePickerSheet from '@/src/components/mypage/ThemePickerSheet';
 import FaqSheet from '@/src/components/mypage/FaqSheet';
 import FeedbackSheet from '@/src/components/mypage/FeedbackSheet';
 import LogoutConfirmDialog from '@/src/components/mypage/LogoutConfirmDialog';
+import InlineBanner from '@/src/components/ads/InlineBanner';
+
+const STATS_BANNER_AD_GROUP_ID =
+  process.env.NEXT_PUBLIC_AD_GROUP_ID_STATS_BANNER || 'ait-ad-test-banner-id';
 
 export default function MyPageTab() {
   const router = useRouter();
@@ -40,14 +45,10 @@ export default function MyPageTab() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [notifLoading, setNotifLoading] = useState(false);
 
-  // 비로그인 가드
-  useEffect(() => {
-    if (isLoaded && !tossUserId) {
-      router.replace('/');
-    }
-  }, [isLoaded, tossUserId, router]);
+  // MY 탭은 게스트 접근 허용 (통계/설정 열람)
+  // 로그인 필요한 액션은 각 행에서 분기
 
-  if (!isLoaded || !tossUserId) return null;
+  if (!isLoaded) return null;
 
   const themeLabel =
     themeMode === 'system'
@@ -86,17 +87,12 @@ export default function MyPageTab() {
 
   return (
     <div className="pb-8 min-h-screen bg-white">
-      {/* 헤더 */}
-      <div className="px-3 pt-14 pb-2 flex items-center">
-        <button
-          onClick={() => router.back()}
-          className="p-2 text-gray-500 hover:text-gray-800 active:scale-90 transition-all"
-        >
-          <ChevronLeft size={22} />
-        </button>
-        <h1 className="text-[17px] font-black text-gray-900 ml-1">
-          마이페이지
-        </h1>
+      {/* 헤더 — 탭 진입이라 뒤로가기 불필요. 제목만 */}
+      <div className="px-5 pt-14 pb-2">
+        <h1 className="text-[22px] font-black text-gray-900 tracking-tight">MY</h1>
+        <p className="text-xs text-gray-400 mt-0.5">
+          {tossUserId ? '나의 활동과 설정' : '비로그인 · 활동은 로그인 후 저장돼요'}
+        </p>
       </div>
 
       <div className="px-5 pt-4 space-y-6">
@@ -111,7 +107,15 @@ export default function MyPageTab() {
           <CreditOverview />
         </section>
 
-        {/* ③ 앱 설정 */}
+        {/* ③ 나의 통계 */}
+        <section>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+            나의 통계
+          </p>
+          <StatsOverview />
+        </section>
+
+        {/* ④ 앱 설정 */}
         <section>
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
             앱 설정
@@ -155,7 +159,7 @@ export default function MyPageTab() {
           </div>
         </section>
 
-        {/* ④ 지원 */}
+        {/* ⑤ 지원 */}
         <section>
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
             지원
@@ -180,18 +184,33 @@ export default function MyPageTab() {
           </div>
         </section>
 
-        {/* ⑤ 계정 액션 */}
+        {/* ⑥ 계정 액션 */}
         <section>
           <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
-            <SettingsRow
-              Icon={LogOut}
-              label="로그아웃"
-              danger
-              hideChevron
-              onClick={() => setLogoutOpen(true)}
-            />
+            {tossUserId ? (
+              <SettingsRow
+                Icon={LogOut}
+                label="로그아웃"
+                danger
+                hideChevron
+                onClick={() => setLogoutOpen(true)}
+              />
+            ) : (
+              <SettingsRow
+                Icon={LogIn}
+                label="토스 로그인"
+                hideChevron
+                onClick={() => router.push('/intro')}
+              />
+            )}
           </div>
         </section>
+
+        {/* 배너 광고 — 기존 통계 탭 하단 위치 승계 */}
+        <InlineBanner
+          adGroupId={STATS_BANNER_AD_GROUP_ID}
+          className="mt-2"
+        />
       </div>
 
       <ThemePickerSheet open={themeOpen} onClose={() => setThemeOpen(false)} />

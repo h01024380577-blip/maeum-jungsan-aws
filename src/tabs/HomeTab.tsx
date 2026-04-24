@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/src/lib/apiClient';
 import AdPromptDialog from '@/src/components/ads/AdPromptDialog';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Wallet, User, Copy, LogIn } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Wallet, Copy, LogIn } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -127,7 +127,7 @@ export default function HomeTab() {
   const handleTossLogin = () => {
     router.push('/intro');
   };
-  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, refreshCredits } = useStore();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, refreshCredits } = useStore();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
   React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
@@ -326,24 +326,10 @@ export default function HomeTab() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
+      {/* Header — 프로필은 MY 탭으로 이관. 비로그인만 로그인 CTA 노출 */}
       <div className="px-5 pt-14 pb-6 bg-white">
-        <div className="flex items-center mb-8 gap-2">
-          {tossUserId ? (
-            <button
-              type="button"
-              onClick={() => router.push('/mypage')}
-              className="flex items-center space-x-2 pl-1 pr-2.5 py-1 bg-gray-50 rounded-full border border-gray-100 shrink-0 hover:bg-gray-100 active:scale-[0.97] transition-all"
-            >
-              <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                <User size={13} className="text-blue-500" />
-              </div>
-              <span className="text-xs font-bold text-gray-800 truncate max-w-[64px]">
-                {tossUserName ?? '로그인됨'}
-              </span>
-              <ChevronRight size={14} className="text-gray-400" />
-            </button>
-          ) : (
+        {!tossUserId && (
+          <div className="flex items-center mb-8">
             <button
               type="button"
               onClick={handleTossLogin}
@@ -352,8 +338,8 @@ export default function HomeTab() {
               <LogIn size={13} />
               <span>토스 로그인</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Hero Title */}
         <div className="text-center mb-6">

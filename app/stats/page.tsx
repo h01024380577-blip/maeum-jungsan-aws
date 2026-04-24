@@ -1,12 +1,13 @@
 "use client";
 
-import StatisticsTab from "@/src/tabs/StatisticsTab";
+import MyPageTab from "@/src/tabs/MyPageTab";
 import Layout from "@/components/Layout";
 
-export default function StatsPage() {
+// 라우트 경로는 /stats 유지 (딥링크·탭 상태 호환), 내용은 MY 탭.
+export default function MyTabPage() {
   return (
     <Layout activeTab="stats">
-      <StatisticsTab />
+      <MyPageTab />
     </Layout>
   );
 }
