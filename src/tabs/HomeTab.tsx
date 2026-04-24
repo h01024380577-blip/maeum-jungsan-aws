@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/src/lib/apiClient';
-import CreditPill from '@/src/components/ads/CreditPill';
+import AdPromptDialog from '@/src/components/ads/AdPromptDialog';
 import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Wallet, User, Copy, LogIn } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -135,6 +135,7 @@ export default function HomeTab() {
   const [inputUrl, setInputUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
+  const [adPromptOpen, setAdPromptOpen] = useState(false);
   const [parsedData, setParsedData] = useState<Partial<EventEntry> | null>(null);
   const [initialParsedData, setInitialParsedData] = useState<Partial<EventEntry> | null>(null);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
@@ -219,7 +220,7 @@ export default function HomeTab() {
         } else if (result.reason === 'low_confidence') {
           toast.error(result.message || '초대장 정보를 충분히 읽지 못했어요. 직접 입력을 이용해 주세요.');
         } else if (result.reason === 'no_credits') {
-          toast.error('AI 분석 횟수를 모두 사용했어요. 광고를 보고 충전해 주세요.');
+          setAdPromptOpen(true);
         } else {
           toast.error('분석 실패. 직접 입력을 이용해 주세요.');
         }
@@ -352,7 +353,6 @@ export default function HomeTab() {
               <span>토스 로그인</span>
             </button>
           )}
-          <CreditPill variant="ai" />
         </div>
 
         {/* Hero Title */}
@@ -663,6 +663,11 @@ export default function HomeTab() {
         )}
       </AnimatePresence>
 
+      <AdPromptDialog
+        open={adPromptOpen}
+        onClose={() => setAdPromptOpen(false)}
+        rewardType="AI_CREDIT"
+      />
     </div>
   );
 }

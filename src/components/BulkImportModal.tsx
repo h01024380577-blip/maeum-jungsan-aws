@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, Check, AlertCircle, Table as TableIcon } from 'lucide-react';
 import { parseCSVFile, cleanAmount, cleanDate, RawCSVData } from '../utils/csvParser';
 import { useStore, EventType } from '../store/useStore';
-import CreditPill from './ads/CreditPill';
+import AdPromptDialog from './ads/AdPromptDialog';
 
 interface Props {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function BulkImportModal({ isOpen, onClose }: Props) {
-  const { bulkAddEntries, refreshCredits, credits } = useStore();
+  const { bulkAddEntries, refreshCredits } = useStore();
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview'>('upload');
   const [csvData, setCsvData] = useState<RawCSVData | null>(null);
   const [transactionType, setTransactionType] = useState<'INCOME' | 'EXPENSE'>('INCOME');
@@ -25,6 +25,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
   });
   const [error, setError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [adPromptOpen, setAdPromptOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 모달 오픈 시 최신 크레딧 상태 동기화
@@ -101,7 +102,8 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
       return result;
     } catch (err: any) {
       if (err?.status === 402 || err?.reason === 'no_credits') {
-        setError('CSV 가져오기 횟수를 모두 사용했어요. 아래 버튼으로 광고를 보고 충전해 주세요.');
+        setError(null);
+        setAdPromptOpen(true);
       } else {
         setError(err?.message || '가져오기에 실패했어요. 잠시 후 다시 시도해 주세요.');
       }
@@ -144,14 +146,11 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
             exit={{ y: '100%' }}
             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white rounded-t-[32px] p-6 z-[110] shadow-2xl max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex justify-between items-center mb-6 gap-2">
-              <h2 className="text-xl font-bold shrink-0">대량 불러오기</h2>
-              <div className="flex items-center gap-1.5 ml-auto">
-                <CreditPill variant="csv" />
-                <button onClick={onClose} disabled={isImporting} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30">
-                  <X size={20} />
-                </button>
-              </div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">대량 불러오기</h2>
+              <button onClick={onClose} disabled={isImporting} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30">
+                <X size={20} />
+              </button>
             </div>
 
             {error && (
@@ -315,7 +314,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                   </button>
                   <button
                     onClick={handleImport}
-                    disabled={isImporting || credits.csv.balance === 0}
+                    disabled={isImporting}
                     className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
                     {isImporting ? (
@@ -323,8 +322,6 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         <span>등록 중...</span>
                       </>
-                    ) : credits.csv.balance === 0 ? (
-                      <span>횟수 부족</span>
                     ) : (
                       <span>일괄 등록하기</span>
                     )}
@@ -333,6 +330,11 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
               </div>
             )}
           </motion.div>
+          <AdPromptDialog
+            open={adPromptOpen}
+            onClose={() => setAdPromptOpen(false)}
+            rewardType="CSV_CREDIT"
+          />
         </>
       )}
     </AnimatePresence>

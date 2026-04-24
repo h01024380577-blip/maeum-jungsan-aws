@@ -38,17 +38,14 @@ function CreditSlot({ variant }: SlotProps) {
         {slot.balance}
         <span className="text-xs font-bold ml-0.5">회</span>
       </p>
-      {slot.balance === 0 ? (
-        <RewardedAdButton
-          rewardType={rewardType}
-          label="광고 보고 +1회"
-          className="mt-auto inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-        />
-      ) : (
-        <p className="text-[10px] text-gray-500 mt-auto">
-          최대 {slot.cap}회 보관
-        </p>
-      )}
+      <p className="text-[10px] text-gray-500">
+        최대 {slot.cap}회 보관
+      </p>
+      <RewardedAdButton
+        rewardType={rewardType}
+        label="광고 보고 +1회"
+        className="mt-auto inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-sm active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-none disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
+      />
     </div>
   );
 }
