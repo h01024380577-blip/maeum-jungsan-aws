@@ -12,9 +12,11 @@ echo "📤 Pushing to remote..."
 cd "$LOCAL_DIR"
 git push aws main
 
-# --- 2. EC2 pull + build + restart ---
+# --- 2. EC2 pull + install + build + restart ---
+# npm install: package-lock 변경(신규 의존성) 대응. 변경 없으면 빠르게 패스.
+# pm2 --update-env: .env 파일 변경도 프로세스에 반영되도록 강제.
 echo "🖥️  Updating EC2 server..."
-ssh "$EC2_HOST" "cd $EC2_DIR && git pull origin main && npx prisma generate && npm run build:next 2>&1 | tail -3 && pm2 restart maeum-jungsan"
+ssh "$EC2_HOST" "cd $EC2_DIR && git pull origin main && npm install --legacy-peer-deps 2>&1 | tail -3 && npx prisma generate && npm run build:next 2>&1 | tail -3 && set -a && source .env && set +a && pm2 restart maeum-jungsan --update-env"
 
 # --- 3. AIT 번들 재생성 (클라이언트 변경 시) ---
 # 최근 커밋에서 클라이언트 파일 변경 여부 확인
