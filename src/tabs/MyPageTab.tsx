@@ -85,7 +85,7 @@ export default function MyPageTab() {
   };
 
   return (
-    <div className="pb-8 min-h-screen">
+    <div className="pb-8 min-h-screen bg-white">
       {/* 헤더 */}
       <div className="px-3 pt-14 pb-2 flex items-center">
         <button
@@ -117,28 +117,35 @@ export default function MyPageTab() {
             앱 설정
           </p>
           <div className="rounded-2xl bg-white border border-gray-100 divide-y divide-gray-100 overflow-hidden">
-            <SettingsRow
-              Icon={Bell}
-              label="푸시 알림"
-              disabled={notifLoading}
-              trailing={
-                <span
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold ${
-                    notificationsEnabled
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-blue-100 text-blue-700'
-                  }`}
-                >
-                  {notifLoading
-                    ? '...'
-                    : notificationsEnabled
-                    ? '허용됨'
-                    : '허용하기'}
+            {/* 푸시 알림 — 우측 pill이 독립 버튼 */}
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center shrink-0">
+                  <Bell size={16} className="text-gray-500" />
+                </div>
+                <span className="text-sm font-bold text-gray-800 truncate">
+                  푸시 알림
                 </span>
-              }
-              hideChevron
-              onClick={handleNotifToggle}
-            />
+              </div>
+              <button
+                type="button"
+                onClick={handleNotifToggle}
+                disabled={notifLoading}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all active:scale-95 disabled:cursor-wait ${
+                  notifLoading
+                    ? 'bg-gray-100 text-gray-400'
+                    : notificationsEnabled
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-blue-500 text-white shadow-sm shadow-blue-200'
+                }`}
+              >
+                {notifLoading
+                  ? '...'
+                  : notificationsEnabled
+                  ? '허용됨'
+                  : '허용하기'}
+              </button>
+            </div>
             <SettingsRow
               Icon={Palette}
               label="화면 테마"
