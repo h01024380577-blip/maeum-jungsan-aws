@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { ArrowDownLeft, ArrowUpRight, Wallet } from 'lucide-react';
+import InlineBanner from '../components/ads/InlineBanner';
+
+const STATS_BANNER_AD_GROUP_ID =
+  process.env.NEXT_PUBLIC_AD_GROUP_ID_STATS_BANNER || 'ait-ad-test-banner-id';
 
 const BLUE = ['#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#1d4ed8'];
 const RED = ['#ef4444', '#f87171', '#fca5a5', '#dc2626', '#b91c1c'];
@@ -129,6 +133,9 @@ export default function StatisticsTab() {
             <p className="text-sm text-gray-300">데이터가 없습니다</p>
           </div>
         )}
+
+        {/* 배너 광고 — 통계 탭 하단에만 노출 (의도적 진입 페이지) */}
+        <InlineBanner adGroupId={STATS_BANNER_AD_GROUP_ID} className="mt-2" />
       </div>
     </div>
   );
