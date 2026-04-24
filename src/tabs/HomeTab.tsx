@@ -294,7 +294,11 @@ export default function HomeTab() {
     } catch (err: any) {
       toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`);
       setSelectedImage(null); setInputUrl(''); setInputText('');
-    } finally { setIsParsing(false); }
+    } finally {
+      setIsParsing(false);
+      // 성공/실패/환불 어떤 경로든 서버 잔고와 UI 배지를 반드시 맞춘다.
+      refreshCredits();
+    }
   };
 
   const handleManualEntry = () => {

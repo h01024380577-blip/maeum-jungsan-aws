@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { apiFetch, clearAuthToken } from '@/src/lib/apiClient';
+import { apiFetch, clearAuthToken, registerCreditRefreshHook } from '@/src/lib/apiClient';
 
 export type EventType = 'wedding' | 'funeral' | 'birthday' | 'other';
 export type TransactionType = 'INCOME' | 'EXPENSE';
@@ -292,3 +292,8 @@ export const useStore = create<AppState>()((set, get) => ({
       },
     })),
 }));
+
+// 크레딧 영향 API 호출 후 자동 재동기화. apiClient가 적절한 경로 호출 시 트리거.
+registerCreditRefreshHook(() => {
+  useStore.getState().refreshCredits();
+});
