@@ -2,9 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/src/lib/apiClient';
 import CreditPill from '@/src/components/ads/CreditPill';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut, LogIn, Sun, Moon, Monitor, Palette } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Wallet, User, Copy, LogIn } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
-import { useTheme, ThemeMode } from '../lib/theme';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 // 토스트는 useToast 훅으로 처리 (아래 컴포넌트에서 사용)
@@ -128,8 +127,7 @@ export default function HomeTab() {
   const handleTossLogin = () => {
     router.push('/intro');
   };
-  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData, refreshCredits } = useStore();
-  const { mode: themeMode, resolved: resolvedTheme, setMode: setThemeMode } = useTheme();
+  const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, refreshCredits } = useStore();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
   React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
@@ -137,45 +135,14 @@ export default function HomeTab() {
   const [inputUrl, setInputUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
-  const [notificationLoading, setNotificationLoading] = useState(false);
   const [parsedData, setParsedData] = useState<Partial<EventEntry> | null>(null);
   const [initialParsedData, setInitialParsedData] = useState<Partial<EventEntry> | null>(null);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [testMsgCode, setTestMsgCode] = useState('');
-  const [testMsgDeployId, setTestMsgDeployId] = useState('');
-  const [isSendingTestMsg, setIsSendingTestMsg] = useState(false);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
   const [savedAccount, setSavedAccount] = useState('');
   const [lastClipboardText, setLastClipboardText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-
-  const toggleNotification = async () => {
-    if (!tossUserId) { toast.error('토스 로그인 후 이용할 수 있어요.'); return; }
-    setNotificationLoading(true);
-    try {
-      const next = !notificationsEnabled;
-      const res = await apiFetch('/api/notification-consent', {
-        method: 'POST',
-        body: JSON.stringify({ enabled: next }),
-      });
-      if (res.ok) {
-        setNotificationsEnabled(next);
-        toast.success(next ? '알림이 허용되었습니다.' : '알림이 해제되었습니다.');
-      } else {
-        toast.error('설정 변경에 실패했습니다.');
-      }
-    } catch {
-      toast.error('네트워크 오류가 발생했습니다.');
-    } finally {
-      setNotificationLoading(false);
-    }
-  };
 
   React.useEffect(() => {
     const check = async () => {
@@ -696,226 +663,6 @@ export default function HomeTab() {
         )}
       </AnimatePresence>
 
-      {/* 설정 바텀시트 */}
-      <AnimatePresence>
-        {showSettings && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)} className="fixed inset-0 bg-black/40 z-[80]" />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[28px] px-5 py-5 z-[90] shadow-2xl">
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-black text-gray-900">설정</h3>
-                <button onClick={() => setShowSettings(false)} className="p-2 text-gray-400 hover:text-gray-600"><CloseIcon size={18} /></button>
-              </div>
-
-              <div className="space-y-3 max-h-[65vh] overflow-y-auto pb-4 no-scrollbar">
-                {/* 알림 설정 */}
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                        <Bell size={16} className={notificationsEnabled ? 'text-green-500' : 'text-gray-400'} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-800">푸시알림 설정</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={toggleNotification}
-                      disabled={notificationLoading || !tossUserId || notificationsEnabled === null}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!tossUserId || notificationsEnabled === null ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : notificationsEnabled ? 'bg-green-100 text-green-700 active:scale-95' : 'bg-blue-500 text-white active:scale-95'}`}
-                    >
-                      {notificationLoading ? '...' : notificationsEnabled ? '허용됨' : '허용하기'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* 화면 테마 */}
-                <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                      <Palette size={16} className="text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">화면 테마</p>
-                      <p className="text-[11px] text-gray-400">
-                        {themeMode === 'system' ? `시스템 설정 따름 · 현재 ${resolvedTheme === 'dark' ? '다크' : '라이트'}` : themeMode === 'dark' ? '다크 모드' : '라이트 모드'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex bg-white rounded-xl p-1 border border-gray-100">
-                    {([
-                      { key: 'light' as ThemeMode, label: '라이트', Icon: Sun },
-                      { key: 'dark' as ThemeMode, label: '다크', Icon: Moon },
-                      { key: 'system' as ThemeMode, label: '시스템', Icon: Monitor },
-                    ]).map(({ key, label, Icon }) => {
-                      const active = themeMode === key;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setThemeMode(key)}
-                          className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-[11px] font-bold transition-all active:scale-95 ${active ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                        >
-                          <Icon size={14} />
-                          <span>{label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* FAQ */}
-                <div className="bg-gray-50 rounded-2xl overflow-hidden">
-                  <div className="flex items-center space-x-3 p-4 pb-3">
-                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                      <HelpCircle size={16} className="text-gray-400" />
-                    </div>
-                    <p className="text-sm font-bold text-gray-800">자주 묻는 질문</p>
-                  </div>
-                  <div className="px-4 pb-3 space-y-1">
-                    {[
-                      { q: 'AI 분석이 정확하지 않아요', a: 'AI가 텍스트나 이미지에서 정보를 추출하지만 오류가 있을 수 있습니다. 분석 결과 화면에서 직접 수정 후 저장하세요.' },
-                      { q: '데이터가 사라졌어요', a: '토스 로그인 후 데이터가 서버에 저장됩니다. 로그인 상태를 확인해 주세요.' },
-                      { q: '토스페이 송금이 안 돼요', a: '토스 앱이 설치된 환경에서만 동작합니다. 계좌번호를 복사 후 토스 앱에서 직접 송금하세요.' },
-                      { q: '연락처 불러오기가 안 돼요', a: '앱인토스 환경에서만 연락처 접근이 가능합니다. 토스 앱 내에서 실행해 주세요.' },
-                    ].map((item, i) => (
-                      <div key={i} className="bg-white rounded-xl overflow-hidden">
-                        <button onClick={() => setOpenFaqIndex(openFaqIndex === i ? null : i)} className="w-full flex items-center justify-between px-3.5 py-3 text-left">
-                          <span className="text-xs font-bold text-gray-700">{item.q}</span>
-                          <ChevronRight size={14} className={"text-gray-300 transition-transform " + (openFaqIndex === i ? "rotate-90" : "")} />
-                        </button>
-                        {openFaqIndex === i && (
-                          <div className="px-3.5 pb-3">
-                            <p className="text-[11px] text-gray-500 leading-relaxed">{item.a}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 개발자 의견 */}
-                <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                      <MessageSquare size={16} className="text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">개발자에게 의견 보내기</p>
-                      <p className="text-[11px] text-gray-400">불편한 점이나 개선 아이디어를 알려주세요</p>
-                    </div>
-                  </div>
-                  <textarea
-                    value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value)}
-                    placeholder="의견을 자유롭게 입력해 주세요..."
-                    className="w-full h-20 p-3 bg-white rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 resize-none border border-gray-100 placeholder:text-gray-300"
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!feedbackText.trim()) { toast.error('내용을 입력해 주세요.'); return; }
-                      setIsSendingFeedback(true);
-                      try {
-                        const res = await apiFetch('/api/feedback', {
-                          method: 'POST',
-                          body: JSON.stringify({ message: feedbackText, userId: tossUserId || 'anonymous' }),
-                        });
-                        if (res.ok) {
-                          toast.success('소중한 의견 감사합니다!');
-                          setFeedbackText('');
-                        } else {
-                          // API 없으면 mailto 폴백
-                          window.location.href = `mailto:feedback@maeum-jungsan.com?subject=${encodeURIComponent('마음정산 의견')}&body=${encodeURIComponent(feedbackText)}`;
-                          toast.success('메일 앱이 열립니다.');
-                        }
-                      } catch {
-                        window.location.href = `mailto:feedback@maeum-jungsan.com?subject=${encodeURIComponent('마음정산 의견')}&body=${encodeURIComponent(feedbackText)}`;
-                        toast.success('메일 앱이 열립니다.');
-                      } finally {
-                        setIsSendingFeedback(false);
-                      }
-                    }}
-                    disabled={isSendingFeedback || !feedbackText.trim()}
-                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] ${!feedbackText.trim() ? 'bg-gray-200 text-gray-400' : 'bg-blue-500 text-white shadow-sm'}`}
-                  >
-                    {isSendingFeedback ? '전송 중...' : '의견 보내기'}
-                  </button>
-                </div>
-
-
-                {/* 버전 정보 */}
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                      <Info size={16} className="text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-800">마음정산 v1.0.0</p>
-                      <p className="text-[11px] text-gray-400">경조사 스마트 관리 앱</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 로그아웃 / 데이터 초기화 */}
-                <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="w-full bg-gray-50 rounded-2xl p-4 flex items-center space-x-3 active:scale-[0.98] transition-all"
-                >
-                  <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                    <LogOut size={16} className="text-red-400" />
-                  </div>
-                  <p className="text-sm font-bold text-red-500">{tossUserId ? '로그아웃' : '데이터 초기화'}</p>
-                </button>
-
-                {/* 로그아웃 확인 모달 */}
-                <AnimatePresence>
-                  {showLogoutConfirm && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 bg-black/40 z-[600] flex items-center justify-center px-8"
-                      onClick={() => setShowLogoutConfirm(false)}
-                    >
-                      <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                        className="bg-white rounded-2xl p-6 w-full max-w-[300px] shadow-xl"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <p className="text-[15px] font-bold text-gray-900 text-center mb-5">
-                          {tossUserId ? '로그아웃하시겠습니까?' : '데이터를 초기화하시겠습니까?'}
-                        </p>
-                        <div className="flex gap-2.5">
-                          <button
-                            onClick={() => setShowLogoutConfirm(false)}
-                            className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-500 bg-gray-100 active:scale-[0.97] transition-all"
-                          >
-                            취소
-                          </button>
-                          <button
-                            onClick={() => {
-                              clearData();
-                              localStorage.removeItem('heartbook-onboarding-seen');
-                              setShowLogoutConfirm(false);
-                              setShowSettings(false);
-                            }}
-                            className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-blue-500 shadow-sm shadow-blue-200 active:scale-[0.97] transition-all"
-                          >
-                            확인
-                          </button>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
