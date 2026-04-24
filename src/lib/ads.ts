@@ -19,21 +19,26 @@ export function getAdGroupId(rewardType: RewardType): string {
 }
 
 /** 현재 환경에서 리워드 광고 사용 가능 여부. SSR/미지원 버전이면 false. */
-export async function isRewardedAdSupported(): Promise<boolean> {
-  if (typeof window === 'undefined') return false;
-  try {
-    const { loadFullScreenAd, showFullScreenAd } = await import(
-      '@apps-in-toss/web-framework'
-    );
-    return (
-      typeof loadFullScreenAd?.isSupported === 'function' &&
-      loadFullScreenAd.isSupported() &&
-      typeof showFullScreenAd?.isSupported === 'function' &&
-      showFullScreenAd.isSupported()
-    );
-  } catch {
-    return false;
-  }
+let supportedCache: Promise<boolean> | null = null;
+export function isRewardedAdSupported(): Promise<boolean> {
+  if (supportedCache) return supportedCache;
+  if (typeof window === 'undefined') return Promise.resolve(false);
+  supportedCache = (async () => {
+    try {
+      const { loadFullScreenAd, showFullScreenAd } = await import(
+        '@apps-in-toss/web-framework'
+      );
+      return (
+        typeof loadFullScreenAd?.isSupported === 'function' &&
+        loadFullScreenAd.isSupported() &&
+        typeof showFullScreenAd?.isSupported === 'function' &&
+        showFullScreenAd.isSupported()
+      );
+    } catch {
+      return false;
+    }
+  })();
+  return supportedCache;
 }
 
 export interface ShowRewardedAdOutcome {

@@ -39,7 +39,12 @@ export default function RewardedAdButton({ rewardType, className, label, onCharg
   }, []);
 
   const slot = rewardType === 'AI_CREDIT' ? credits.ai : credits.csv;
-  const disabled = busy || !supported || !slot.canWatchAd;
+  // 활성 조건은 "잔고가 cap 미만" + "환경 미지원이 확정되지 않음".
+  // supported === null (로딩 중)은 낙관적으로 활성 — 클릭 시점에 다시 판정.
+  // 오늘 광고 시청 상한(daily_ad_limit)도 클릭 시점에 서버에서 검사하므로
+  // 여기서는 로컬 watchesRemaining만으로 선차단하지 않음.
+  const capReached = slot.balance >= slot.cap;
+  const disabled = busy || supported === false || capReached;
 
   const handleClick = async () => {
     if (busy) return;
@@ -48,15 +53,17 @@ export default function RewardedAdButton({ rewardType, className, label, onCharg
       return;
     }
     if (supported === null) {
-      toast.message('광고 모듈을 준비 중이에요. 잠시 후 다시 시도해 주세요.');
-      return;
+      // 아직 판정 전이면 현재 프로미스를 대기 — 즉시 진행 가능
+      const ok = await isRewardedAdSupported();
+      if (!ok) {
+        toast.message('이 버전에서는 광고가 지원되지 않아요. 토스 앱을 최신 버전으로 업데이트해 주세요.');
+        setSupported(false);
+        return;
+      }
+      setSupported(true);
     }
     if (slot.balance >= slot.cap) {
       toast.message(`크레딧이 가득 찼어요 (최대 ${slot.cap}회).`);
-      return;
-    }
-    if (!slot.canWatchAd) {
-      toast.message('오늘 광고 시청을 모두 사용했어요. 내일 다시 받을 수 있어요.');
       return;
     }
     setBusy(true);
