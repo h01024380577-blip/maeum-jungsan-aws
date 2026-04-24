@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/src/lib/apiClient';
 import CreditPill from '@/src/components/ads/CreditPill';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut, Sun, Moon, Monitor, Palette } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Bell, Settings, Wallet, TrendingUp, User, Copy, HelpCircle, MessageSquare, Info, LogOut, LogIn, Sun, Moon, Monitor, Palette } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { useTheme, ThemeMode } from '../lib/theme';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -123,6 +124,10 @@ const eventIcon = (t: string, size = 14) => {
 const eventLabel = (t: string) => t === 'wedding' ? '결혼' : t === 'funeral' ? '부고' : t === 'birthday' ? '생일' : '기타';
 
 export default function HomeTab() {
+  const router = useRouter();
+  const handleTossLogin = () => {
+    router.push('/intro');
+  };
   const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, tossUserName, notificationsEnabled, setNotificationsEnabled, clearData, refreshCredits } = useStore();
   const { mode: themeMode, resolved: resolvedTheme, setMode: setThemeMode } = useTheme();
   const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -357,19 +362,30 @@ export default function HomeTab() {
       <div className="px-5 pt-14 pb-6 bg-white">
         <div className="flex items-center mb-8 gap-2">
           {tossUserId ? (
-            <div className="flex items-center space-x-2 pl-1 pr-3.5 py-1 bg-gray-50 rounded-full border border-gray-100 shrink-0">
+            <button
+              type="button"
+              onClick={() => router.push('/mypage')}
+              className="flex items-center space-x-2 pl-1 pr-2.5 py-1 bg-gray-50 rounded-full border border-gray-100 shrink-0 hover:bg-gray-100 active:scale-[0.97] transition-all"
+            >
               <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                 <User size={13} className="text-blue-500" />
               </div>
-              <span className="text-xs font-bold text-gray-800 truncate max-w-[64px]">{tossUserName ?? '로그인됨'}</span>
-            </div>
+              <span className="text-xs font-bold text-gray-800 truncate max-w-[64px]">
+                {tossUserName ?? '로그인됨'}
+              </span>
+              <ChevronRight size={14} className="text-gray-400" />
+            </button>
           ) : (
-            <div className="h-9" />
+            <button
+              type="button"
+              onClick={handleTossLogin}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500 text-white text-xs font-bold shrink-0 shadow-sm shadow-blue-100 active:scale-[0.97] transition-all"
+            >
+              <LogIn size={13} />
+              <span>토스 로그인</span>
+            </button>
           )}
           <CreditPill variant="ai" />
-          <button onClick={() => setShowSettings(true)} className="ml-auto p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <Settings size={20} />
-          </button>
         </div>
 
         {/* Hero Title */}
