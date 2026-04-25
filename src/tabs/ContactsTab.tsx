@@ -346,7 +346,7 @@ export default function ContactsTab() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-white z-50 flex flex-col"
+            className="fixed inset-0 bg-white z-[100] flex flex-col"
           >
             <div className="px-5 pt-14 pb-3 border-b border-gray-100">
               <div className="flex items-center justify-between mb-3">
