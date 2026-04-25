@@ -76,7 +76,7 @@ interface AppState {
   addContact: (contact: Omit<Contact, 'id' | 'userId'>) => Promise<string>;
   updateContact: (id: string, contact: Partial<Contact>) => Promise<void>;
   removeContact: (id: string) => Promise<void>;
-  syncContacts: (contacts: Omit<Contact, 'id' | 'userId'>[]) => Promise<void>;
+  syncContacts: (contacts: Omit<Contact, 'id' | 'userId'>[]) => Promise<{ inserted: number; skipped: number; attempted: number }>;
   addFeedback: (original: any, corrected: any) => void;
   bulkAddEntries: (entries: Omit<EventEntry, 'id' | 'createdAt' | 'userId'>[]) => Promise<{ inserted: number }>;
   refreshCredits: () => Promise<void>;
@@ -226,10 +226,29 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   syncContacts: async (newContacts) => {
-    const existing = new Set(get().contacts.map(c => c.name));
-    for (const c of newContacts.filter(c => !existing.has(c.name))) {
-      await get().addContact(c);
+    const existingNames = new Set(get().contacts.map(c => c.name));
+    const toSend = newContacts.filter(c => !existingNames.has(c.name));
+    if (toSend.length === 0) {
+      return { inserted: 0, skipped: newContacts.length, attempted: newContacts.length };
     }
+    const res = await apiFetch('/api/contacts/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ contacts: toSend }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.reason || err.error || 'bulk_failed');
+    }
+    const json = await res.json();
+    const inserted: Contact[] = json.contacts ?? [];
+    if (inserted.length > 0) {
+      set(state => ({ contacts: [...state.contacts, ...inserted] }));
+    }
+    return {
+      inserted: json.inserted ?? inserted.length,
+      skipped: (newContacts.length - toSend.length) + (json.skipped ?? 0),
+      attempted: newContacts.length,
+    };
   },
 
   bulkAddEntries: async (entries) => {

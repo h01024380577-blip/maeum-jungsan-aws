@@ -38,14 +38,18 @@ export default function ContactsTab() {
   };
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncPhase, setSyncPhase] = useState<'fetching' | 'uploading' | null>(null);
+  const [fetchedCount, setFetchedCount] = useState(0);
 
   const [showConfirm, setShowConfirm] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ type: 'success' | 'error'; message: string; count?: number } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ type: 'success' | 'error'; message: string; count?: number; skipped?: number } | null>(null);
 
   const handleSync = async () => {
     setIsSyncing(true);
+    setSyncPhase('fetching');
+    setFetchedCount(0);
     try {
-      const { fetchContacts, FetchContactsPermissionError } = await import('@apps-in-toss/web-framework');
+      const { fetchContacts } = await import('@apps-in-toss/web-framework');
 
       // 권한 확인
       const permission = await fetchContacts.getPermission() as string;
@@ -80,6 +84,7 @@ export default function ContactsTab() {
             });
           }
         }
+        setFetchedCount(allContacts.length);
         if (res.done || res.nextOffset == null) break;
         offset = res.nextOffset;
       }
@@ -89,8 +94,15 @@ export default function ContactsTab() {
         return;
       }
 
-      await syncContacts(allContacts);
-      setSyncResult({ type: 'success', message: '연락처를 불러왔습니다', count: allContacts.length });
+      setSyncPhase('uploading');
+      const { inserted, skipped } = await syncContacts(allContacts);
+      const message =
+        inserted === 0
+          ? '이미 모두 등록된 연락처입니다'
+          : skipped > 0
+          ? `${inserted}명 추가됨 (${skipped}명은 이미 있음)`
+          : '연락처를 불러왔습니다';
+      setSyncResult({ type: 'success', message, count: inserted, skipped });
     } catch (err: any) {
       console.error('연락처 불러오기 실패:', err);
       if (err?.name === 'FetchContactsPermissionError') {
@@ -100,6 +112,7 @@ export default function ContactsTab() {
       }
     } finally {
       setIsSyncing(false);
+      setSyncPhase(null);
     }
   };
 
@@ -221,6 +234,35 @@ export default function ContactsTab() {
           </motion.div>
         </div>
       )}
+
+      {/* 연동 진행 중 오버레이 */}
+      <AnimatePresence>
+        {isSyncing && syncPhase && (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-6">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-[300px] shadow-xl text-center"
+            >
+              <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center">
+                <div className="w-10 h-10 border-[3px] border-blue-100 border-t-blue-500 rounded-full animate-spin" />
+              </div>
+              <p className="text-sm font-bold text-gray-900">
+                {syncPhase === 'fetching' ? '전화번호부를 읽는 중' : '서버에 저장하는 중'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {syncPhase === 'fetching'
+                  ? fetchedCount > 0
+                    ? `${fetchedCount}명 확인됨`
+                    : '잠시만 기다려 주세요'
+                  : '거의 다 됐어요'}
+              </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 연동 결과 모달 */}
       <AnimatePresence>

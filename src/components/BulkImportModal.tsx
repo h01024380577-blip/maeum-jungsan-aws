@@ -147,7 +147,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
             className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white rounded-t-[32px] p-6 z-[110] shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">대량 불러오기</h2>
+              <h2 className="text-xl font-bold">대량 가져오기</h2>
               <button onClick={onClose} disabled={isImporting} className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-30">
                 <X size={20} />
               </button>
@@ -274,22 +274,22 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                 </div>
                 
                 <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-auto">
                     <thead className="bg-gray-100 text-gray-500 text-[10px] uppercase font-bold">
                       <tr>
-                        <th className="px-4 py-2 text-left">이름</th>
-                        <th className="px-4 py-2 text-right">금액</th>
-                        <th className="px-4 py-2 text-left">장소</th>
+                        <th className="px-3 py-2 text-left">이름</th>
+                        <th className="px-3 py-2 text-right">금액</th>
+                        <th className="px-3 py-2 text-left">장소</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {previewRows.map((row: any, idx) => (
                         <tr key={idx}>
-                          <td className="px-4 py-3 font-medium">{row.targetName}</td>
-                          <td className={`px-4 py-3 text-right font-bold ${transactionType === 'INCOME' ? 'text-blue-600' : 'text-red-500'}`}>
+                          <td className="px-3 py-3 text-[13px] font-medium whitespace-nowrap">{row.targetName}</td>
+                          <td className={`px-3 py-3 text-right text-[13px] font-bold tabular-nums whitespace-nowrap ${transactionType === 'INCOME' ? 'text-blue-600' : 'text-red-500'}`}>
                             {transactionType === 'INCOME' ? '+' : '-'}{row.amount.toLocaleString()}원
                           </td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">{row.location}</td>
+                          <td className="px-3 py-3 text-gray-500 text-xs break-words">{row.location}</td>
                         </tr>
                       ))}
                     </tbody>

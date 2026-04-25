@@ -343,36 +343,41 @@ export default function HomeTab() {
 
         {/* Hero Title */}
         <div className="text-center mb-6">
+          <img
+            src="/icon.png"
+            alt="마음정산"
+            width={64}
+            height={64}
+            className="mx-auto mb-3 rounded-2xl shadow-sm"
+          />
           <h2 className="text-[28px] font-black text-gray-900 tracking-tight">마음정산 AI</h2>
           <p className="text-sm text-gray-400 mt-1">링크나 이미지만으로 경조사 정보를 자동 입력하세요</p>
         </div>
 
-        {/* Summary Cards */}
-        {entries.length > 0 && (
-          <div className="grid grid-cols-3 gap-2.5 mb-2">
-            <div className="bg-blue-50 rounded-2xl p-3 text-center">
-              <div className="flex items-center justify-center space-x-1 mb-1">
-                <ArrowDownLeft size={11} className="text-blue-500" />
-                <span className="text-[9px] font-bold text-blue-400 uppercase">받음</span>
-              </div>
-              <p className="text-base font-black text-blue-600">{(totalReceived / 10000).toFixed(0)}<span className="text-[10px] font-bold text-blue-400">만</span></p>
+        {/* Summary Cards — 내역이 없어도 프레임은 유지하고 0으로 표시 */}
+        <div className="grid grid-cols-3 gap-2.5 mb-2">
+          <div className="bg-blue-50 rounded-2xl p-3 text-center">
+            <div className="flex items-center justify-center space-x-1 mb-1">
+              <ArrowDownLeft size={11} className="text-blue-500" />
+              <span className="text-[9px] font-bold text-blue-400 uppercase">받음</span>
             </div>
-            <div className="bg-red-50 rounded-2xl p-3 text-center">
-              <div className="flex items-center justify-center space-x-1 mb-1">
-                <ArrowUpRight size={11} className="text-red-400" />
-                <span className="text-[9px] font-bold text-red-400 uppercase">보냄</span>
-              </div>
-              <p className="text-base font-black text-red-500">{(totalGiven / 10000).toFixed(0)}<span className="text-[10px] font-bold text-red-400">만</span></p>
-            </div>
-            <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
-              <div className="flex items-center justify-center space-x-1 mb-1">
-                <Wallet size={11} className="text-gray-400" />
-                <span className="text-[9px] font-bold text-gray-400 uppercase">합계</span>
-              </div>
-              <p className={`text-base font-black ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{balance >= 0 ? '+' : ''}{(balance / 10000).toFixed(0)}<span className="text-[10px] font-bold text-gray-400">만</span></p>
-            </div>
+            <p className="text-base font-black text-blue-600">{(totalReceived / 10000).toFixed(0)}<span className="text-[10px] font-bold text-blue-400">만</span></p>
           </div>
-        )}
+          <div className="bg-red-50 rounded-2xl p-3 text-center">
+            <div className="flex items-center justify-center space-x-1 mb-1">
+              <ArrowUpRight size={11} className="text-red-400" />
+              <span className="text-[9px] font-bold text-red-400 uppercase">보냄</span>
+            </div>
+            <p className="text-base font-black text-red-500">{(totalGiven / 10000).toFixed(0)}<span className="text-[10px] font-bold text-red-400">만</span></p>
+          </div>
+          <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+            <div className="flex items-center justify-center space-x-1 mb-1">
+              <Wallet size={11} className="text-gray-400" />
+              <span className="text-[9px] font-bold text-gray-400 uppercase">합계</span>
+            </div>
+            <p className={`text-base font-black ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{balance >= 0 ? '+' : ''}{(balance / 10000).toFixed(0)}<span className="text-[10px] font-bold text-gray-400">만</span></p>
+          </div>
+        </div>
       </div>
 
       {/* Input Section */}
