@@ -199,7 +199,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                   </div>
                   <div className="text-center">
                     <p className="font-bold text-gray-700">CSV 파일 선택</p>
-                    <p className="text-xs text-gray-400 mt-1">여기를 클릭하거나 파일을 드래그하세요</p>
+                    <p className="text-xs text-gray-400 mt-1">여기를 클릭하여 파일을 업로드하세요</p>
                   </div>
                   <input 
                     type="file" 

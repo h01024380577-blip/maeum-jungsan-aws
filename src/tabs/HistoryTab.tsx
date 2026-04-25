@@ -72,7 +72,7 @@ export default function HistoryTab() {
           </div>
           <button onClick={() => setImportOpen(true)} className="flex items-center space-x-1.5 bg-blue-50 text-blue-600 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors active:scale-95">
             <FileSpreadsheet size={14} />
-            <span>CSV 가져오기</span>
+            <span>대량 가져오기</span>
           </button>
         </div>
       </div>

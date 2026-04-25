@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { Search, UserPlus, ArrowRight, User, CheckCircle, AlertCircle, Star } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Search, UserPlus, ArrowRight, User, CheckCircle, AlertCircle, Star, Check, X } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContactDetail from '../components/ContactDetail';
+
+type FetchedContact = { name: string; phone: string; relation: string };
+const makeKey = (c: FetchedContact, i: number) => `${i}|${c.name}|${c.phone}`;
 
 export default function ContactsTab() {
   const { contacts, entries, syncContacts, updateContact } = useStore();
@@ -44,7 +47,50 @@ export default function ContactsTab() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [syncResult, setSyncResult] = useState<{ type: 'success' | 'error'; message: string; count?: number; skipped?: number } | null>(null);
 
-  const handleSync = async () => {
+  // 선택 단계 상태
+  const [fetchedContacts, setFetchedContacts] = useState<FetchedContact[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [showSelection, setShowSelection] = useState(false);
+  const [selectionSearch, setSelectionSearch] = useState('');
+
+  const filteredFetched = useMemo(() => {
+    const s = selectionSearch.toLowerCase().trim();
+    return fetchedContacts
+      .map((c, i) => ({ c, key: makeKey(c, i) }))
+      .filter(({ c }) => !s || c.name.toLowerCase().includes(s) || c.phone.includes(s));
+  }, [fetchedContacts, selectionSearch]);
+
+  const allFilteredSelected = filteredFetched.length > 0 && filteredFetched.every(({ key }) => selectedKeys.has(key));
+
+  const toggleKey = (key: string) => {
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        filteredFetched.forEach(({ key }) => next.delete(key));
+      } else {
+        filteredFetched.forEach(({ key }) => next.add(key));
+      }
+      return next;
+    });
+  };
+
+  const closeSelection = () => {
+    setShowSelection(false);
+    setFetchedContacts([]);
+    setSelectedKeys(new Set());
+    setSelectionSearch('');
+  };
+
+  const handleFetch = async () => {
     setIsSyncing(true);
     setSyncPhase('fetching');
     setFetchedCount(0);
@@ -68,7 +114,7 @@ export default function ContactsTab() {
       }
 
       // 연락처 전체 가져오기 (페이지네이션)
-      const allContacts: { name: string; phone: string; relation: string }[] = [];
+      const allContacts: FetchedContact[] = [];
       let offset = 0;
       const size = 50;
 
@@ -94,15 +140,11 @@ export default function ContactsTab() {
         return;
       }
 
-      setSyncPhase('uploading');
-      const { inserted, skipped } = await syncContacts(allContacts);
-      const message =
-        inserted === 0
-          ? '이미 모두 등록된 연락처입니다'
-          : skipped > 0
-          ? `${inserted}명 추가됨 (${skipped}명은 이미 있음)`
-          : '연락처를 불러왔습니다';
-      setSyncResult({ type: 'success', message, count: inserted, skipped });
+      // 선택 단계로 전환 — 기본 모두 선택
+      setFetchedContacts(allContacts);
+      setSelectedKeys(new Set(allContacts.map((c, i) => makeKey(c, i))));
+      setSelectionSearch('');
+      setShowSelection(true);
     } catch (err: any) {
       console.error('연락처 불러오기 실패:', err);
       if (err?.name === 'FetchContactsPermissionError') {
@@ -113,6 +155,38 @@ export default function ContactsTab() {
     } finally {
       setIsSyncing(false);
       setSyncPhase(null);
+    }
+  };
+
+  const handleConfirmSelection = async () => {
+    const selected = fetchedContacts
+      .map((c, i) => ({ c, key: makeKey(c, i) }))
+      .filter(({ key }) => selectedKeys.has(key))
+      .map(({ c }) => c);
+
+    if (selected.length === 0) return;
+
+    setShowSelection(false);
+    setIsSyncing(true);
+    setSyncPhase('uploading');
+    try {
+      const { inserted, skipped } = await syncContacts(selected);
+      const message =
+        inserted === 0
+          ? '이미 모두 등록된 연락처입니다'
+          : skipped > 0
+          ? `${inserted}명 추가됨 (${skipped}명은 이미 있음)`
+          : '연락처를 불러왔습니다';
+      setSyncResult({ type: 'success', message, count: inserted, skipped });
+    } catch (err) {
+      console.error('연락처 저장 실패:', err);
+      setSyncResult({ type: 'error', message: '연락처를 저장하지 못했습니다' });
+    } finally {
+      setIsSyncing(false);
+      setSyncPhase(null);
+      setFetchedContacts([]);
+      setSelectedKeys(new Set());
+      setSelectionSearch('');
     }
   };
 
@@ -225,7 +299,7 @@ export default function ContactsTab() {
                 취소
               </button>
               <button
-                onClick={() => { setShowConfirm(false); handleSync(); }}
+                onClick={() => { setShowConfirm(false); handleFetch(); }}
                 className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-blue-500 active:scale-95 transition-all"
               >
                 연동하기
@@ -261,6 +335,94 @@ export default function ContactsTab() {
               </p>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* 가져올 연락처 선택 시트 */}
+      <AnimatePresence>
+        {showSelection && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 bg-white z-50 flex flex-col"
+          >
+            <div className="px-5 pt-14 pb-3 border-b border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <button onClick={closeSelection} className="p-1 -ml-1 active:scale-90 transition-transform" aria-label="닫기">
+                  <X size={22} className="text-gray-700" />
+                </button>
+                <h2 className="text-sm font-black text-gray-900">가져올 연락처 선택</h2>
+                <div className="w-7" />
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
+                <input
+                  type="text"
+                  placeholder="이름 또는 번호 검색..."
+                  value={selectionSearch}
+                  onChange={(e) => setSelectionSearch(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50 rounded-xl outline-none text-sm placeholder:text-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between mt-3 px-1">
+                <button onClick={toggleSelectAll} className="flex items-center gap-2 active:scale-95 transition-transform">
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${allFilteredSelected ? 'bg-blue-500' : 'bg-white border-2 border-gray-200'}`}>
+                    {allFilteredSelected && <Check size={14} className="text-white" strokeWidth={3} />}
+                  </div>
+                  <span className="text-xs font-bold text-gray-700">
+                    {selectionSearch ? '검색 결과 전체' : '전체 선택'}
+                  </span>
+                </button>
+                <p className="text-xs font-bold text-blue-500">
+                  {selectedKeys.size}명 선택됨
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {filteredFetched.length === 0 ? (
+                <div className="text-center py-16 text-gray-300 text-sm">검색 결과가 없습니다</div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {filteredFetched.map(({ c, key }) => {
+                    const checked = selectedKeys.has(key);
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => toggleKey(key)}
+                        className="w-full px-5 py-3.5 flex items-center gap-3 active:bg-gray-50 transition-colors"
+                      >
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-blue-500' : 'bg-white border-2 border-gray-200'}`}>
+                          {checked && <Check size={14} className="text-white" strokeWidth={3} />}
+                        </div>
+                        <div className="w-9 h-9 shrink-0 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                          <User size={18} />
+                        </div>
+                        <div className="text-left min-w-0 flex-1">
+                          <p className="text-sm font-bold text-gray-900 truncate">{c.name}</p>
+                          {c.phone && <p className="text-[11px] text-gray-400 truncate">{c.phone}</p>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-3 border-t border-gray-100 bg-white">
+              <button
+                onClick={handleConfirmSelection}
+                disabled={selectedKeys.size === 0}
+                className="w-full py-3.5 rounded-2xl text-sm font-black text-white bg-blue-500 active:scale-[0.98] transition-transform disabled:bg-gray-200 disabled:text-gray-400"
+              >
+                {selectedKeys.size > 0 ? `${selectedKeys.size}명 추가하기` : '연락처를 선택해 주세요'}
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
