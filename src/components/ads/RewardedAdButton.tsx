@@ -7,6 +7,7 @@ import { apiFetch } from '@/src/lib/apiClient';
 import { getAdGroupId, isRewardedAdSupported, showRewardedAd } from '@/src/lib/ads';
 import { useStore } from '@/src/store/useStore';
 import type { RewardType } from '@prisma/client';
+import CreditGrantedDialog from './CreditGrantedDialog';
 
 interface Props {
   rewardType: RewardType;
@@ -17,20 +18,19 @@ interface Props {
   onCharged?: (newBalance: number) => void;
 }
 
-const LABELS: Record<RewardType, { idle: string; success: string }> = {
+const LABELS: Record<RewardType, { idle: string }> = {
   AI_CREDIT: {
     idle: '광고 보고 AI 분석 +1회',
-    success: 'AI 분석 1회 충전 완료',
   },
   CSV_CREDIT: {
     idle: '광고 보고 CSV 가져오기 +1회',
-    success: 'CSV 가져오기 1회 충전 완료',
   },
 };
 
 export default function RewardedAdButton({ rewardType, className, label, onCharged }: Props) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  const [grantedBalance, setGrantedBalance] = useState<number | null>(null);
   const credits = useStore((s) => s.credits);
   const refreshCredits = useStore((s) => s.refreshCredits);
 
@@ -112,8 +112,7 @@ export default function RewardedAdButton({ rewardType, className, label, onCharg
       }
       const result = await redeemRes.json();
       await refreshCredits();
-      toast.success(`${LABELS[rewardType].success} ✨`);
-      onCharged?.(result.balance);
+      setGrantedBalance(result.balance);
     } catch {
       toast.error('광고 로드에 실패했어요. 잠시 후 다시 시도해 주세요.');
     } finally {
@@ -121,31 +120,44 @@ export default function RewardedAdButton({ rewardType, className, label, onCharg
     }
   };
 
+  const handleGrantedConfirm = () => {
+    const balance = grantedBalance;
+    setGrantedBalance(null);
+    if (balance !== null) onCharged?.(balance);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={disabled}
-      className={
-        className ??
-        `inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all ${
-          disabled
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-blue-100 active:scale-95'
-        }`
-      }
-    >
-      {busy ? (
-        <>
-          <Loader2 size={14} className="animate-spin" />
-          <span>광고 준비 중…</span>
-        </>
-      ) : (
-        <>
-          <PlayCircle size={14} />
-          <span>{label ?? LABELS[rewardType].idle}</span>
-        </>
-      )}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={disabled}
+        className={
+          className ??
+          `inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all ${
+            disabled
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md shadow-blue-100 active:scale-95'
+          }`
+        }
+      >
+        {busy ? (
+          <>
+            <Loader2 size={14} className="animate-spin" />
+            <span>광고 준비 중…</span>
+          </>
+        ) : (
+          <>
+            <PlayCircle size={14} />
+            <span>{label ?? LABELS[rewardType].idle}</span>
+          </>
+        )}
+      </button>
+      <CreditGrantedDialog
+        open={grantedBalance !== null}
+        rewardType={rewardType}
+        onConfirm={handleGrantedConfirm}
+      />
+    </>
   );
 }
