@@ -42,7 +42,11 @@ function utf8ToBase64(str: string): string {
   return btoa(bin);
 }
 
-const CSV_MIME = 'text/csv';
+// 브라우저 다운로드용 (정확한 csv MIME)
+const CSV_MIME_BROWSER = 'text/csv';
+// AIT 네이티브용 — Android Toss 앱이 text/csv 를 silent reject 하므로 octet-stream 으로
+// 강제 바이너리 다운로드 (확장자 .csv 가 핸들러 결정). 시뮬레이터는 무관.
+const CSV_MIME_AIT = 'application/octet-stream';
 
 export interface ExportOptions {
   entries: EventEntry[];
@@ -93,7 +97,7 @@ export async function exportToCsv({ entries }: ExportOptions): Promise<ExportRes
       const appVersion = typeof m.getTossAppVersion === 'function' ? m.getTossAppVersion() : 'unknown';
       const base64 = utf8ToBase64(csv);
       console.log('[export] AIT saveBase64Data 호출', { platform, appVersion, fileName: filename, base64Bytes: base64.length });
-      await m.saveBase64Data({ data: base64, fileName: filename, mimeType: CSV_MIME });
+      await m.saveBase64Data({ data: base64, fileName: filename, mimeType: CSV_MIME_AIT });
       console.log('[export] AIT saveBase64Data 성공');
       return { filename, rowCount, via: 'ait-bridge' };
     }
@@ -102,7 +106,7 @@ export async function exportToCsv({ entries }: ExportOptions): Promise<ExportRes
   }
 
   // 2) 브라우저 폴백 — Blob + a[download]
-  const blob = new Blob([csv], { type: `${CSV_MIME};charset=utf-8` });
+  const blob = new Blob([csv], { type: `${CSV_MIME_BROWSER};charset=utf-8` });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
