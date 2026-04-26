@@ -22,7 +22,7 @@ interface Props {
 
 const MESSAGES: Record<RewardType, string> = {
   AI_CREDIT: 'AI 분석 횟수를 다 썼어요.\n광고를 보고 1회 더 받을까요?',
-  CSV_CREDIT: 'CSV 가져오기 횟수를 다 썼어요.\n광고를 보고 1회 더 받을까요?',
+  CSV_CREDIT: '대량 가져오기 횟수를 다 썼어요.\n광고를 보고 1회 더 받을까요?',
 };
 
 export default function AdPromptDialog({

@@ -13,7 +13,7 @@ function CreditSlot({ variant }: SlotProps) {
   const slot = useStore((s) => (variant === 'ai' ? s.credits.ai : s.credits.csv));
   const loaded = useStore((s) => s.credits.loaded);
   const Icon = variant === 'ai' ? Sparkles : Upload;
-  const label = variant === 'ai' ? 'AI 분석' : 'CSV 가져오기';
+  const label = variant === 'ai' ? 'AI 분석' : '대량 가져오기';
   const rewardType = variant === 'ai' ? 'AI_CREDIT' : 'CSV_CREDIT';
   const tone =
     variant === 'ai'

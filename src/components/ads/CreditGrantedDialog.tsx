@@ -18,7 +18,7 @@ interface Props {
 
 const MESSAGES: Record<RewardType, string> = {
   AI_CREDIT: 'AI 분석 1회가\n충전되었어요!',
-  CSV_CREDIT: 'CSV 가져오기 1회가\n충전되었어요!',
+  CSV_CREDIT: '대량 가져오기 1회가\n충전되었어요!',
 };
 
 export default function CreditGrantedDialog({ open, rewardType, onConfirm }: Props) {

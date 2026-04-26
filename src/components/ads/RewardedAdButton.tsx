@@ -23,7 +23,7 @@ const LABELS: Record<RewardType, { idle: string }> = {
     idle: '광고 보고 AI 분석 +1회',
   },
   CSV_CREDIT: {
-    idle: '광고 보고 CSV 가져오기 +1회',
+    idle: '광고 보고 대량 가져오기 +1회',
   },
 };
 
