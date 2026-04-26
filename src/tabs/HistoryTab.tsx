@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useStore, EventType } from '../store/useStore';
-import { Search, Trash2, Heart, Flower2, Cake, Star, FileSpreadsheet, Pencil, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Search, Trash2, Heart, Flower2, Cake, Star, FileSpreadsheet, Pencil, ArrowUpRight, ArrowDownLeft, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 import BulkImportModal from '../components/BulkImportModal';
 import ContactDetail from '../components/ContactDetail';
+import { exportToExcel } from '../utils/excelExport';
 
 const eventIcon = (t: string) => {
   if (t === 'wedding') return <Heart size={14} className="text-pink-500 fill-pink-500" />;
@@ -28,6 +30,25 @@ export default function HistoryTab() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (isExporting) return;
+    if (entries.length === 0 && contacts.length === 0) {
+      toast.error('내보낼 데이터가 없어요');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const { filename, rowCount } = exportToExcel({ entries, contacts });
+      toast.success(`${filename} 저장됨 (${rowCount}행)`);
+    } catch (err) {
+      console.error('[export] failed:', err);
+      toast.error('내보내기에 실패했어요');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -56,8 +77,23 @@ export default function HistoryTab() {
   };
 
   const filtered = entries.filter(e => {
-    const s = search.toLowerCase();
-    const matchSearch = !s || (e.targetName || '').toLowerCase().includes(s) || (e.location || '').toLowerCase().includes(s) || (e.relation || '').toLowerCase().includes(s);
+    const s = search.toLowerCase().trim();
+    const eventLabelText = eventLabel(e.eventType, e.customEventName);
+    // 부고는 '장례'로도 검색되도록 동의어 처리
+    const eventAliases =
+      e.eventType === 'funeral' ? `${eventLabelText} 장례` : eventLabelText;
+    const haystack = [
+      e.targetName,
+      e.location,
+      e.relation,
+      eventAliases,
+      e.eventType,
+      e.customEventName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    const matchSearch = !s || haystack.includes(s);
     const matchFilter = filter === 'all' || (filter === 'given' ? e.type === 'EXPENSE' : e.type === 'INCOME');
     return matchSearch && matchFilter;
   });
@@ -70,10 +106,20 @@ export default function HistoryTab() {
             <h1 className="text-[22px] font-black text-gray-900 tracking-tight">전체 내역</h1>
             <p className="text-xs text-gray-400 mt-0.5">{entries.length}건의 기록</p>
           </div>
-          <button onClick={() => setImportOpen(true)} className="flex items-center space-x-1.5 bg-blue-50 text-blue-600 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors active:scale-95">
-            <FileSpreadsheet size={14} />
-            <span>대량 가져오기</span>
-          </button>
+          <div className="flex items-center space-x-1.5">
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="flex items-center space-x-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors active:scale-95 disabled:opacity-60"
+            >
+              <Download size={14} />
+              <span>{isExporting ? '내보내는 중' : '내보내기'}</span>
+            </button>
+            <button onClick={() => setImportOpen(true)} className="flex items-center space-x-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors active:scale-95">
+              <FileSpreadsheet size={14} />
+              <span>가져오기</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -83,7 +129,7 @@ export default function HistoryTab() {
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-          <input type="text" placeholder="이름, 장소, 관계 검색..." value={search} onChange={(e) => setSearch(e.target.value)}
+          <input type="text" placeholder="이름, 결혼·부고·생일, 장소, 관계 검색..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-11 pr-4 py-3.5 bg-white rounded-2xl border border-gray-100 shadow-sm focus:ring-2 focus:ring-blue-100 outline-none text-sm placeholder:text-gray-300" />
         </div>
 
