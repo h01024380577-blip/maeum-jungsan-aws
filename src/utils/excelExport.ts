@@ -41,7 +41,11 @@ function arrayBufferToBase64(buf: ArrayBuffer): string {
   return btoa(bin);
 }
 
-const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+// 브라우저 다운로드용 MIME (정확한 xlsx 타입)
+const XLSX_MIME_BROWSER = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+// AIT 네이티브 saveBase64Data 용 MIME — openxmlformats 긴 타입은 native 가 처리 못 해
+// silent fail 하므로 일반 바이너리 octet-stream 으로 전달 (확장자 .xlsx 가 핸들러 결정)
+const XLSX_MIME_AIT = 'application/octet-stream';
 
 export interface ExportOptions {
   entries: EventEntry[];
@@ -108,7 +112,7 @@ export async function exportToExcel({ entries, contacts }: ExportOptions): Promi
     const saveBase64Data = (mod as { saveBase64Data?: (p: { data: string; fileName: string; mimeType: string }) => Promise<void> }).saveBase64Data;
     if (typeof saveBase64Data === 'function') {
       const base64 = arrayBufferToBase64(arrayBuffer);
-      await saveBase64Data({ data: base64, fileName: filename, mimeType: XLSX_MIME });
+      await saveBase64Data({ data: base64, fileName: filename, mimeType: XLSX_MIME_AIT });
       return { filename, rowCount, via: 'ait-bridge' };
     }
   } catch (err) {
@@ -116,7 +120,7 @@ export async function exportToExcel({ entries, contacts }: ExportOptions): Promi
   }
 
   // 2) 브라우저 폴백 — Blob + a[download]
-  const blob = new Blob([arrayBuffer], { type: XLSX_MIME });
+  const blob = new Blob([arrayBuffer], { type: XLSX_MIME_BROWSER });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
