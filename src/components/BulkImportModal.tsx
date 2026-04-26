@@ -304,7 +304,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                     type="file"
                     ref={backupFileInputRef}
                     onChange={handleBackupFileChange}
-                    accept=".csv"
+                    accept=".csv,text/csv,text/plain,text/comma-separated-values,application/csv,application/vnd.ms-excel,application/octet-stream,*/*"
                     className="hidden"
                   />
                 </div>
@@ -327,7 +327,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}
-                    accept=".csv"
+                    accept=".csv,text/csv,text/plain,text/comma-separated-values,application/csv,application/vnd.ms-excel,application/octet-stream,*/*"
                     className="hidden"
                   />
                 </div>

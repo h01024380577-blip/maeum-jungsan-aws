@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
   setExport(token, {
     body: csv,
     fileName,
-    mimeType: 'text/csv;charset=utf-8',
+    // Android MediaStore 가 text/csv 를 좁게 indexing 해 파일 피커·공유에서 안 보이는 문제 회피.
+    // application/vnd.ms-excel 은 Excel 스프레드시트로 더 universal 하게 인식되며 CSV 도 정상 오픈됨.
+    mimeType: 'application/vnd.ms-excel',
     userId,
     createdAt: Date.now(),
   });
