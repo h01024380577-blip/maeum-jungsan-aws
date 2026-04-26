@@ -55,9 +55,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
         location: typeof json.mapping.location === 'number' ? json.mapping.location : -1,
         relation: typeof json.mapping.relation === 'number' ? json.mapping.relation : -1,
       });
-      if (json.detectedType === 'INCOME' || json.detectedType === 'EXPENSE') {
-        setTransactionType(json.detectedType);
-      }
+      // 보냄/받음 은 사용자가 직접 선택하므로 자동 적용하지 않음
       if (typeof json.reason === 'string') setAiReason(json.reason);
       setAiState('success');
     } catch (e) {
@@ -203,35 +201,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
 
             {step === 'upload' && (
               <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-xs font-bold text-gray-500 ml-1">이 장부는 어떤 내역인가요?</label>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setTransactionType('INCOME')}
-                      className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2 ${
-                        transactionType === 'INCOME' 
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-100' 
-                          : 'bg-gray-50 text-gray-500 border border-gray-100'
-                      }`}
-                    >
-                      <div className={`w-2 h-2 rounded-full ${transactionType === 'INCOME' ? 'bg-white' : 'bg-blue-400'}`} />
-                      <span>받음 (수입 / INCOME)</span>
-                    </button>
-                    <button
-                      onClick={() => setTransactionType('EXPENSE')}
-                      className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2 ${
-                        transactionType === 'EXPENSE' 
-                          ? 'bg-red-500 text-white shadow-md shadow-red-100' 
-                          : 'bg-gray-50 text-gray-500 border border-gray-100'
-                      }`}
-                    >
-                      <div className={`w-2 h-2 rounded-full ${transactionType === 'EXPENSE' ? 'bg-white' : 'bg-red-400'}`} />
-                      <span>보냄 (지출 / EXPENSE)</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div 
+                <div
                   onClick={() => fileInputRef.current?.click()}
                   className="border-2 border-dashed border-gray-200 rounded-3xl p-10 flex flex-col items-center justify-center space-y-4 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer"
                 >
@@ -292,6 +262,34 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                     </button>
                   </div>
                 )}
+                {/* 보냄/받음 — 사용자가 직접 선택 (AI 가 추론하지 않음) */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 ml-1">이 장부는 어떤 내역인가요? (필수)</label>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setTransactionType('INCOME')}
+                      className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2 ${
+                        transactionType === 'INCOME'
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-100'
+                          : 'bg-gray-50 text-gray-500 border border-gray-100'
+                      }`}
+                    >
+                      <div className={`w-2 h-2 rounded-full ${transactionType === 'INCOME' ? 'bg-white' : 'bg-blue-400'}`} />
+                      <span>받음 (수입)</span>
+                    </button>
+                    <button
+                      onClick={() => setTransactionType('EXPENSE')}
+                      className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2 ${
+                        transactionType === 'EXPENSE'
+                          ? 'bg-red-500 text-white shadow-md shadow-red-100'
+                          : 'bg-gray-50 text-gray-500 border border-gray-100'
+                      }`}
+                    >
+                      <div className={`w-2 h-2 rounded-full ${transactionType === 'EXPENSE' ? 'bg-white' : 'bg-red-400'}`} />
+                      <span>보냄 (지출)</span>
+                    </button>
+                  </div>
+                </div>
                 <p className="text-sm text-gray-500">엑셀의 열과 앱의 항목을 연결해주세요.</p>
                 <div className="space-y-4">
                   <MappingSelect
