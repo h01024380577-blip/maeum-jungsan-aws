@@ -1,10 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Check, AlertCircle, Table as TableIcon, Sparkles } from 'lucide-react';
+import Papa from 'papaparse';
+import { X, Upload, Check, AlertCircle, Table as TableIcon, Sparkles, Database } from 'lucide-react';
 import { parseCSVFile, cleanAmount, cleanDate, normalizeEventType, RawCSVData } from '../utils/csvParser';
 import { useStore } from '../store/useStore';
 import { apiFetch } from '../lib/apiClient';
 import AdPromptDialog from './ads/AdPromptDialog';
+
+interface BackupRow {
+  targetName: string;
+  amount: number;
+  date: string;
+  eventType: 'wedding' | 'funeral' | 'birthday' | 'other';
+  location: string;
+  relation: string;
+  type: 'INCOME' | 'EXPENSE';
+  isIncome: boolean;
+  memo: string;
+}
+
+const BACKUP_REQUIRED_HEADERS = ['날짜', '구분', '이름', '금액', '종류'];
 
 interface Props {
   isOpen: boolean;
@@ -29,7 +44,68 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
   const [adPromptOpen, setAdPromptOpen] = useState(false);
   const [aiState, setAiState] = useState<'idle' | 'mapping' | 'success' | 'failed'>('idle');
   const [aiReason, setAiReason] = useState<string | null>(null);
+  const [importMode, setImportMode] = useState<'general' | 'backup'>('general');
+  const [backupRows, setBackupRows] = useState<BackupRow[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backupFileInputRef = useRef<HTMLInputElement>(null);
+
+  const parseBackupFile = (file: File): Promise<BackupRow[]> =>
+    new Promise((resolve, reject) => {
+      Papa.parse<Record<string, string>>(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const headers = results.meta.fields ?? [];
+          const missing = BACKUP_REQUIRED_HEADERS.filter((h) => !headers.includes(h));
+          if (missing.length > 0) {
+            reject(new Error(`마음정산 백업 파일이 아닌 것 같아요. 누락된 열: ${missing.join(', ')}`));
+            return;
+          }
+          const rows: BackupRow[] = [];
+          for (const r of results.data) {
+            const name = String(r['이름'] ?? '').trim();
+            const amount = cleanAmount(r['금액']);
+            if (!name || amount <= 0) continue;
+            const division = String(r['구분'] ?? '').trim();
+            // 받음/IN/INCOME → INCOME, 그 외 → EXPENSE
+            const isIncome = /받|IN|INCOME/i.test(division);
+            const type: 'INCOME' | 'EXPENSE' = isIncome ? 'INCOME' : 'EXPENSE';
+            rows.push({
+              targetName: name,
+              amount,
+              date: cleanDate(r['날짜']),
+              eventType: normalizeEventType(r['종류']),
+              location: String(r['장소'] ?? '').trim() || '기타',
+              relation: String(r['관계'] ?? '').trim() || '지인',
+              type,
+              isIncome,
+              memo: String(r['메모'] ?? '').trim() || '백업 복원',
+            });
+          }
+          resolve(rows);
+        },
+        error: reject,
+      });
+    });
+
+  const handleBackupFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = await parseBackupFile(file);
+      if (rows.length === 0) {
+        setError('백업 파일에서 가져올 유효한 행이 없어요.');
+        return;
+      }
+      setBackupRows(rows);
+      setImportMode('backup');
+      setStep('preview');
+      setError(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '백업 파일을 읽는 중 오류가 발생했습니다.';
+      setError(msg);
+    }
+  };
 
   const runAiMapping = async (data: RawCSVData) => {
     setAiState('mapping');
@@ -72,10 +148,11 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     try {
       const data = await parseCSVFile(file);
       setCsvData(data);
+      setImportMode('general');
       setStep('mapping');
       setError(null);
       runAiMapping(data);
@@ -124,7 +201,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
   };
 
   const handleImport = async () => {
-    const processed = processRows();
+    const processed = importMode === 'backup' ? (backupRows ?? []) : processRows();
     if (processed.length === 0) {
       setError('가져올 유효한 데이터가 없습니다.');
       return;
@@ -164,9 +241,17 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
     setError(null);
     setAiState('idle');
     setAiReason(null);
+    setImportMode('general');
+    setBackupRows(null);
   };
 
-  const previewRows = processRows().slice(0, 3);
+  const allRows = importMode === 'backup' ? (backupRows ?? []) : processRows();
+  const previewRows = allRows.slice(0, 3);
+  const totalCount = allRows.length;
+  const incomeCount = importMode === 'backup'
+    ? (backupRows ?? []).filter((r) => r.type === 'INCOME').length
+    : 0;
+  const expenseCount = importMode === 'backup' ? totalCount - incomeCount : 0;
 
   return (
     <AnimatePresence>
@@ -200,33 +285,60 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
             )}
 
             {step === 'upload' && (
-              <div className="space-y-6">
+              <div className="space-y-4">
+                {/* 1) 백업 파일 불러오기 — 우리 export 포맷 인식, 받음/보냄 자동 */}
                 <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-200 rounded-3xl p-10 flex flex-col items-center justify-center space-y-4 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer"
+                  onClick={() => backupFileInputRef.current?.click()}
+                  className="border-2 border-dashed border-emerald-200 bg-emerald-50/30 rounded-3xl p-6 flex flex-col items-center justify-center space-y-3 hover:border-emerald-400 hover:bg-emerald-50 transition-all cursor-pointer"
                 >
-                  <div className="p-4 bg-blue-100 text-blue-600 rounded-full">
-                    <Upload size={32} />
+                  <div className="p-3 bg-emerald-100 text-emerald-600 rounded-full">
+                    <Database size={26} />
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-gray-700">CSV 파일 선택</p>
-                    <p className="text-xs text-gray-400 mt-1">여기를 클릭하여 파일을 업로드하세요</p>
+                    <p className="font-bold text-gray-700">백업 파일 불러오기</p>
+                    <p className="text-[11px] text-emerald-700 mt-1">
+                      마음정산 백업 CSV — 받음/보냄 자동 판단
+                    </p>
                   </div>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    accept=".csv" 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    ref={backupFileInputRef}
+                    onChange={handleBackupFileChange}
+                    accept=".csv"
+                    className="hidden"
                   />
                 </div>
+
+                {/* 2) 일반 CSV 가져오기 — AI 컬럼 매핑 + 사용자 토글 */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-200 rounded-3xl p-6 flex flex-col items-center justify-center space-y-3 hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer"
+                >
+                  <div className="p-3 bg-blue-100 text-blue-600 rounded-full">
+                    <Upload size={26} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-gray-700">일반 CSV 가져오기</p>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      다른 앱·엑셀 파일 — AI 가 자동 매칭
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".csv"
+                    className="hidden"
+                  />
+                </div>
+
                 <div className="bg-blue-50 p-4 rounded-2xl text-xs text-blue-700 space-y-1.5">
                   <p className="font-bold flex items-center gap-1.5">
                     <Sparkles size={13} className="text-blue-500" />
-                    AI 가 열을 자동으로 매칭해줘요
+                    안내
                   </p>
                   <p>• 첫 번째 행은 제목(헤더)이어야 해요.</p>
-                  <p>• 형식이 달라도 이름·금액·날짜를 자동으로 인식해요.</p>
+                  <p>• 백업 파일은 내역 탭의 "내보내기" 로 만든 CSV 예요.</p>
                 </div>
               </div>
             )}
@@ -345,30 +457,49 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
 
             {step === 'preview' && (
               <div className="space-y-6">
-                <div className="flex items-center space-x-2 text-sm font-bold text-gray-700">
-                  <TableIcon size={18} className="text-blue-500" />
-                  <span>데이터 미리보기 (상위 3개)</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-sm font-bold text-gray-700">
+                    <TableIcon size={18} className="text-blue-500" />
+                    <span>데이터 미리보기 (상위 3개)</span>
+                  </div>
+                  {importMode === 'backup' && (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
+                      백업 복원 모드
+                    </span>
+                  )}
                 </div>
-                
+
                 <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
                   <table className="w-full text-sm table-auto">
                     <thead className="bg-gray-100 text-gray-500 text-[10px] uppercase font-bold">
                       <tr>
+                        {importMode === 'backup' && <th className="px-2 py-2 text-left">구분</th>}
                         <th className="px-3 py-2 text-left">이름</th>
                         <th className="px-3 py-2 text-right">금액</th>
                         <th className="px-3 py-2 text-left">장소</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {previewRows.map((row: any, idx) => (
-                        <tr key={idx}>
-                          <td className="px-3 py-3 text-[13px] font-medium whitespace-nowrap">{row.targetName}</td>
-                          <td className={`px-3 py-3 text-right text-[13px] font-bold tabular-nums whitespace-nowrap ${transactionType === 'INCOME' ? 'text-blue-600' : 'text-red-500'}`}>
-                            {transactionType === 'INCOME' ? '+' : '-'}{row.amount.toLocaleString()}원
-                          </td>
-                          <td className="px-3 py-3 text-gray-500 text-xs break-words">{row.location}</td>
-                        </tr>
-                      ))}
+                      {previewRows.map((row: any, idx) => {
+                        const rowType = importMode === 'backup' ? row.type : transactionType;
+                        const isIn = rowType === 'INCOME';
+                        return (
+                          <tr key={idx}>
+                            {importMode === 'backup' && (
+                              <td className="px-2 py-3">
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${isIn ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
+                                  {isIn ? 'IN' : 'OUT'}
+                                </span>
+                              </td>
+                            )}
+                            <td className="px-3 py-3 text-[13px] font-medium whitespace-nowrap">{row.targetName}</td>
+                            <td className={`px-3 py-3 text-right text-[13px] font-bold tabular-nums whitespace-nowrap ${isIn ? 'text-blue-600' : 'text-red-500'}`}>
+                              {isIn ? '+' : '-'}{row.amount.toLocaleString()}원
+                            </td>
+                            <td className="px-3 py-3 text-gray-500 text-xs break-words">{row.location}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -376,14 +507,16 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                 <div className="p-4 bg-blue-50 rounded-2xl flex items-start space-x-3">
                   <Check className="text-blue-600 mt-0.5" size={18} />
                   <p className="text-xs text-blue-700 leading-relaxed">
-                    총 <span className="font-bold">{processRows().length}건</span>의 데이터를 가져옵니다. 
-                    금액의 '원' 표시나 쉼표는 자동으로 제거되었습니다.
+                    총 <span className="font-bold">{totalCount}건</span>의 데이터를 가져옵니다.
+                    {importMode === 'backup' && (
+                      <> (받음 <span className="font-bold text-blue-700">{incomeCount}건</span> · 보냄 <span className="font-bold text-red-600">{expenseCount}건</span>)</>
+                    )}
                   </p>
                 </div>
 
                 <div className="flex space-x-3">
                   <button
-                    onClick={() => setStep('mapping')}
+                    onClick={() => setStep(importMode === 'backup' ? 'upload' : 'mapping')}
                     disabled={isImporting}
                     className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold active:scale-95 transition-all disabled:opacity-40"
                   >
