@@ -12,7 +12,7 @@ import SettingsSheet from '@/src/components/mypage/SettingsSheet';
 import InlineBanner from '@/src/components/ads/InlineBanner';
 
 const STATS_BANNER_AD_GROUP_ID =
-  process.env.NEXT_PUBLIC_AD_GROUP_ID_STATS_BANNER || 'ait-ad-test-banner-id';
+  process.env.NEXT_PUBLIC_AD_GROUP_ID_STATS_BANNER || 'ait.v2.live.b224cbf2d96249cc';
 
 export default function MyPageTab() {
   const tossUserId = useStore((s) => s.tossUserId);
