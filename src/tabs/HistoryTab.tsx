@@ -5,7 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import BulkImportModal from '../components/BulkImportModal';
 import ContactDetail from '../components/ContactDetail';
-import { exportToExcel } from '../utils/excelExport';
+import { exportToCsv } from '../utils/csvExport';
 
 const eventIcon = (t: string) => {
   if (t === 'wedding') return <Heart size={14} className="text-pink-500 fill-pink-500" />;
@@ -40,9 +40,15 @@ export default function HistoryTab() {
     }
     setIsExporting(true);
     try {
-      const { filename, rowCount, via } = await exportToExcel({ entries, contacts });
-      const suffix = via === 'ait-bridge' ? '기기에 저장됐어요' : '다운로드 시작됨';
-      toast.success(`${filename} ${suffix} (${rowCount}행)`);
+      const { filename, rowCount, via } = await exportToCsv({ entries });
+      if (via === 'ait-bridge') {
+        toast.success(`${filename} 저장됨 (${rowCount}행)`, {
+          description: '파일 앱(iOS) 또는 다운로드 폴더(Android)에서 확인하세요',
+          duration: 6000,
+        });
+      } else {
+        toast.success(`${filename} 다운로드 시작 (${rowCount}행)`);
+      }
     } catch (err) {
       console.error('[export] failed:', err);
       toast.error('내보내기에 실패했어요. 잠시 후 다시 시도해 주세요.');
