@@ -320,7 +320,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                   <div className="text-center">
                     <p className="font-bold text-gray-700">일반 CSV 가져오기</p>
                     <p className="text-[11px] text-gray-400 mt-1">
-                      ex) 카카오뱅크·토스 거래내역, 가계부 앱 export, 엑셀 정리본
+                      일반 CSV 파일
                     </p>
                   </div>
                   <input
