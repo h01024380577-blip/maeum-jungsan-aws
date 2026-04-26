@@ -297,7 +297,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                   <div className="text-center">
                     <p className="font-bold text-gray-700">백업 파일 불러오기</p>
                     <p className="text-[11px] text-emerald-700 mt-1">
-                      마음정산 백업 CSV — 받음/보냄 자동 판단
+                      마음정산 백업 CSV
                     </p>
                   </div>
                   <input
@@ -319,9 +319,6 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                   </div>
                   <div className="text-center">
                     <p className="font-bold text-gray-700">일반 CSV 가져오기</p>
-                    <p className="text-[11px] text-gray-400 mt-1">
-                      다른 앱·엑셀 파일 — AI 가 자동 매칭
-                    </p>
                   </div>
                   <input
                     type="file"

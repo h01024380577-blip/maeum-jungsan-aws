@@ -17,7 +17,7 @@ export const CREDITS_CONFIG = {
     guardEnabled: process.env.CSV_CREDIT_GUARD_ENABLED === 'true',
   },
   ad: {
-    dailyLimit: Number(process.env.AD_DAILY_LIMIT ?? 5),
+    dailyLimit: Number(process.env.AD_DAILY_LIMIT ?? 10),
     nonceTtlMs: Number(process.env.AD_NONCE_TTL_MS ?? 5 * 60 * 1000),
   },
 } as const;
