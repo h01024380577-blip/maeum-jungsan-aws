@@ -28,12 +28,33 @@ const todayStamp = () => {
   return `${yyyy}${mm}${dd}`;
 };
 
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  const chunkSize = 0x8000;
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    bin += String.fromCharCode.apply(
+      null,
+      Array.from(bytes.subarray(i, i + chunkSize)),
+    );
+  }
+  return btoa(bin);
+}
+
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
 export interface ExportOptions {
   entries: EventEntry[];
   contacts: Contact[];
 }
 
-export function exportToExcel({ entries, contacts }: ExportOptions): { filename: string; rowCount: number } {
+export interface ExportResult {
+  filename: string;
+  rowCount: number;
+  via: 'ait-bridge' | 'browser-blob';
+}
+
+export async function exportToExcel({ entries, contacts }: ExportOptions): Promise<ExportResult> {
   const sortedEntries = [...entries].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   const entryRows = sortedEntries.map((e) => ({
@@ -79,10 +100,23 @@ export function exportToExcel({ entries, contacts }: ExportOptions): { filename:
 
   const filename = `마음정산_백업_${todayStamp()}.xlsx`;
   const arrayBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
-  const blob = new Blob([arrayBuffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
+  const rowCount = entryRows.length + contactRows.length;
 
+  // 1) AIT(토스 WebView) 우선 — saveBase64Data 브리지 사용
+  try {
+    const mod = await import('@apps-in-toss/web-framework');
+    const saveBase64Data = (mod as { saveBase64Data?: (p: { data: string; fileName: string; mimeType: string }) => Promise<void> }).saveBase64Data;
+    if (typeof saveBase64Data === 'function') {
+      const base64 = arrayBufferToBase64(arrayBuffer);
+      await saveBase64Data({ data: base64, fileName: filename, mimeType: XLSX_MIME });
+      return { filename, rowCount, via: 'ait-bridge' };
+    }
+  } catch (err) {
+    console.warn('[export] AIT saveBase64Data 실패, 브라우저 폴백 사용:', err);
+  }
+
+  // 2) 브라우저 폴백 — Blob + a[download]
+  const blob = new Blob([arrayBuffer], { type: XLSX_MIME });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -91,6 +125,5 @@ export function exportToExcel({ entries, contacts }: ExportOptions): { filename:
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-  return { filename, rowCount: entryRows.length + contactRows.length };
+  return { filename, rowCount, via: 'browser-blob' };
 }

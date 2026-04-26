@@ -40,11 +40,12 @@ export default function HistoryTab() {
     }
     setIsExporting(true);
     try {
-      const { filename, rowCount } = exportToExcel({ entries, contacts });
-      toast.success(`${filename} 저장됨 (${rowCount}행)`);
+      const { filename, rowCount, via } = await exportToExcel({ entries, contacts });
+      const suffix = via === 'ait-bridge' ? '기기에 저장됐어요' : '다운로드 시작됨';
+      toast.success(`${filename} ${suffix} (${rowCount}행)`);
     } catch (err) {
       console.error('[export] failed:', err);
-      toast.error('내보내기에 실패했어요');
+      toast.error('내보내기에 실패했어요. 잠시 후 다시 시도해 주세요.');
     } finally {
       setIsExporting(false);
     }
