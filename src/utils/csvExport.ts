@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import type { EventEntry, Contact } from '../store/useStore';
+import { apiFetch } from '../lib/apiClient';
 
 const eventTypeLabel = (t: string, custom?: string) => {
   if (t === 'wedding') return '결혼';
@@ -28,25 +29,7 @@ const todayStamp = () => {
   return `${yyyy}${mm}${dd}`;
 };
 
-function utf8ToBase64(str: string): string {
-  // UTF-8 한글 안전 변환 — TextEncoder 로 byte 배열 → base64 (chunk 처리)
-  const bytes = new TextEncoder().encode(str);
-  const chunkSize = 0x8000;
-  let bin = '';
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    bin += String.fromCharCode.apply(
-      null,
-      Array.from(bytes.subarray(i, i + chunkSize)),
-    );
-  }
-  return btoa(bin);
-}
-
-// 브라우저 다운로드용 (정확한 csv MIME)
 const CSV_MIME_BROWSER = 'text/csv';
-// AIT 네이티브용 — Android Toss 앱이 text/csv 를 silent reject 하므로 octet-stream 으로
-// 강제 바이너리 다운로드 (확장자 .csv 가 핸들러 결정). 시뮬레이터는 무관.
-const CSV_MIME_AIT = 'application/octet-stream';
 
 export interface ExportOptions {
   entries: EventEntry[];
@@ -57,7 +40,7 @@ export interface ExportOptions {
 export interface ExportResult {
   filename: string;
   rowCount: number;
-  via: 'ait-bridge' | 'browser-blob';
+  via: 'ait-openurl' | 'browser-blob';
 }
 
 export async function exportToCsv({ entries }: ExportOptions): Promise<ExportResult> {
@@ -84,25 +67,35 @@ export async function exportToCsv({ entries }: ExportOptions): Promise<ExportRes
   const filename = `마음정산_백업_${todayStamp()}.csv`;
   const rowCount = rows.length;
 
-  // 1) AIT(토스 WebView) 우선 — saveBase64Data 브리지 사용
+  // 1) AIT(토스 WebView) — saveBase64Data 가 Android 에서 silent fail 하는 문제로
+  // 서버에 임시 저장 → openURL 로 시스템 브라우저 다운로드 우회 사용
   try {
     const mod = await import('@apps-in-toss/web-framework');
     const m = mod as {
-      saveBase64Data?: (p: { data: string; fileName: string; mimeType: string }) => Promise<void>;
+      openURL?: (url: string) => Promise<void>;
       getPlatformOS?: () => string;
       getTossAppVersion?: () => string;
     };
-    if (typeof m.saveBase64Data === 'function') {
+    if (typeof m.openURL === 'function') {
       const platform = typeof m.getPlatformOS === 'function' ? m.getPlatformOS() : 'unknown';
       const appVersion = typeof m.getTossAppVersion === 'function' ? m.getTossAppVersion() : 'unknown';
-      const base64 = utf8ToBase64(csv);
-      console.log('[export] AIT saveBase64Data 호출', { platform, appVersion, fileName: filename, base64Bytes: base64.length });
-      await m.saveBase64Data({ data: base64, fileName: filename, mimeType: CSV_MIME_AIT });
-      console.log('[export] AIT saveBase64Data 성공');
-      return { filename, rowCount, via: 'ait-bridge' };
+      console.log('[export] AIT 우회 경로 시도', { platform, appVersion, csvBytes: csv.length });
+
+      const res = await apiFetch('/api/export/csv', {
+        method: 'POST',
+        body: JSON.stringify({ csv, fileName: filename }),
+      });
+      const json: { success?: boolean; url?: string; error?: string } = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.success || !json.url) {
+        throw new Error(`server upload failed: ${json?.error ?? res.status}`);
+      }
+      console.log('[export] 서버 업로드 성공, openURL 호출:', json.url);
+      await m.openURL(json.url);
+      console.log('[export] openURL 완료 — 시스템 브라우저에서 다운로드');
+      return { filename, rowCount, via: 'ait-openurl' };
     }
   } catch (err) {
-    console.warn('[export] AIT saveBase64Data 실패, 브라우저 폴백 사용:', err);
+    console.warn('[export] AIT 우회 경로 실패, 브라우저 폴백 사용:', err);
   }
 
   // 2) 브라우저 폴백 — Blob + a[download]

@@ -41,10 +41,10 @@ export default function HistoryTab() {
     setIsExporting(true);
     try {
       const { filename, rowCount, via } = await exportToCsv({ entries });
-      if (via === 'ait-bridge') {
-        toast.success(`${filename} 저장됨 (${rowCount}행)`, {
-          description: '파일 앱(iOS) 또는 다운로드 폴더(Android)에서 확인하세요',
-          duration: 6000,
+      if (via === 'ait-openurl') {
+        toast.success(`${filename} (${rowCount}행)`, {
+          description: '브라우저가 열리면 다운로드 받기를 눌러주세요. 1시간 내 유효',
+          duration: 7000,
         });
       } else {
         toast.success(`${filename} 다운로드 시작 (${rowCount}행)`);
