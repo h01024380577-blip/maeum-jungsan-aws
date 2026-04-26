@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, EventType } from '../store/useStore';
-import { Search, Trash2, Heart, Flower2, Cake, Star, FileSpreadsheet, Pencil, ArrowUpRight, ArrowDownLeft, Download } from 'lucide-react';
+import { Search, Trash2, Heart, Flower2, Cake, Star, FileSpreadsheet, Pencil, ArrowUpRight, ArrowDownLeft, Upload } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import BulkImportModal from '../components/BulkImportModal';
@@ -119,7 +119,7 @@ export default function HistoryTab() {
               disabled={isExporting}
               className="flex items-center space-x-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors active:scale-95 disabled:opacity-60"
             >
-              <Download size={14} />
+              <Upload size={14} />
               <span>{isExporting ? '내보내는 중' : '내보내기'}</span>
             </button>
             <button onClick={() => setImportOpen(true)} className="flex items-center space-x-1 bg-blue-50 text-blue-600 px-3 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors active:scale-95">
