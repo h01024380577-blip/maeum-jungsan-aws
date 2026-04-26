@@ -6,7 +6,7 @@ import type { RewardType } from '@prisma/client';
 export const CREDITS_CONFIG = {
   ai: {
     welcome: Number(process.env.AI_CREDIT_WELCOME ?? 5),
-    cap: Number(process.env.AI_CREDIT_CAP ?? 10),
+    cap: Number(process.env.AI_CREDIT_CAP ?? 5),
     rewardAmount: Number(process.env.AI_CREDIT_REWARD_AMOUNT ?? 1),
     guardEnabled: process.env.AI_CREDIT_GUARD_ENABLED === 'true',
   },

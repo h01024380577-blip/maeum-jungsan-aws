@@ -96,7 +96,7 @@ export const useStore = create<AppState>()((set, get) => ({
   tossUserName: null,
   notificationsEnabled: false,
   credits: {
-    ai: { balance: 0, cap: 10, canWatchAd: false },
+    ai: { balance: 0, cap: 5, canWatchAd: false },
     csv: { balance: 0, cap: 3, canWatchAd: false },
     ad: { watchesRemaining: 0, dailyLimit: 5, resetAt: null },
     loaded: false,
