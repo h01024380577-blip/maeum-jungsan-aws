@@ -49,6 +49,16 @@ export const cleanAmount = (value: any): number => {
   return isNaN(amount) ? 0 : Math.abs(amount);
 };
 
+export const normalizeEventType = (value: any): 'wedding' | 'funeral' | 'birthday' | 'other' => {
+  if (!value) return 'wedding';
+  const v = String(value).trim().toLowerCase();
+  if (!v) return 'wedding';
+  if (v === 'wedding' || v.includes('결혼') || v.includes('웨딩') || v.includes('혼')) return 'wedding';
+  if (v === 'funeral' || v.includes('부고') || v.includes('장례') || v.includes('조의') || v.includes('상')) return 'funeral';
+  if (v === 'birthday' || v.includes('생일') || v.includes('돌') || v.includes('환갑') || v.includes('칠순') || v.includes('팔순')) return 'birthday';
+  return 'other';
+};
+
 export const cleanDate = (value: any): string => {
   if (!value || typeof value !== 'string') return new Date().toISOString().split('T')[0];
   

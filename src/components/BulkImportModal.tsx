@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Check, AlertCircle, Table as TableIcon } from 'lucide-react';
-import { parseCSVFile, cleanAmount, cleanDate, RawCSVData } from '../utils/csvParser';
-import { useStore, EventType } from '../store/useStore';
+import { X, Upload, Check, AlertCircle, Table as TableIcon, Sparkles } from 'lucide-react';
+import { parseCSVFile, cleanAmount, cleanDate, normalizeEventType, RawCSVData } from '../utils/csvParser';
+import { useStore } from '../store/useStore';
+import { apiFetch } from '../lib/apiClient';
 import AdPromptDialog from './ads/AdPromptDialog';
 
 interface Props {
@@ -26,7 +27,44 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [adPromptOpen, setAdPromptOpen] = useState(false);
+  const [aiState, setAiState] = useState<'idle' | 'mapping' | 'success' | 'failed'>('idle');
+  const [aiReason, setAiReason] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const runAiMapping = async (data: RawCSVData) => {
+    setAiState('mapping');
+    setAiReason(null);
+    try {
+      const res = await apiFetch('/api/csv-map', {
+        method: 'POST',
+        body: JSON.stringify({
+          headers: data.headers,
+          sampleRows: data.rows.slice(0, 5),
+        }),
+      });
+      const json: any = await res.json().catch(() => null);
+      if (!res.ok || !json?.success || !json.mapping) {
+        setAiState('failed');
+        return;
+      }
+      setMapping({
+        targetName: typeof json.mapping.targetName === 'number' ? json.mapping.targetName : -1,
+        amount: typeof json.mapping.amount === 'number' ? json.mapping.amount : -1,
+        date: typeof json.mapping.date === 'number' ? json.mapping.date : -1,
+        eventType: typeof json.mapping.eventType === 'number' ? json.mapping.eventType : -1,
+        location: typeof json.mapping.location === 'number' ? json.mapping.location : -1,
+        relation: typeof json.mapping.relation === 'number' ? json.mapping.relation : -1,
+      });
+      if (json.detectedType === 'INCOME' || json.detectedType === 'EXPENSE') {
+        setTransactionType(json.detectedType);
+      }
+      if (typeof json.reason === 'string') setAiReason(json.reason);
+      setAiState('success');
+    } catch (e) {
+      console.warn('[csv-map] failed:', e);
+      setAiState('failed');
+    }
+  };
 
   // 모달 오픈 시 최신 크레딧 상태 동기화
   useEffect(() => {
@@ -42,6 +80,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
       setCsvData(data);
       setStep('mapping');
       setError(null);
+      runAiMapping(data);
     } catch (err: any) {
       setError(err.message || '파일을 읽는 중 오류가 발생했습니다.');
     }
@@ -76,7 +115,7 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
         targetName: name,
         amount: amount,
         date: date,
-        eventType: (mapping.eventType !== -1 ? String(row[mapping.eventType] || '').toLowerCase() : 'wedding') as EventType,
+        eventType: normalizeEventType(mapping.eventType !== -1 ? row[mapping.eventType] : 'wedding'),
         location: mapping.location !== -1 ? String(row[mapping.location] || '').trim() : '기타',
         relation: mapping.relation !== -1 ? String(row[mapping.relation] || '').trim() : '지인',
         type: transactionType,
@@ -125,6 +164,8 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
       relation: -1,
     });
     setError(null);
+    setAiState('idle');
+    setAiReason(null);
   };
 
   const previewRows = processRows().slice(0, 3);
@@ -209,47 +250,85 @@ export default function BulkImportModal({ isOpen, onClose }: Props) {
                     className="hidden" 
                   />
                 </div>
-                <div className="bg-gray-50 p-4 rounded-2xl text-xs text-gray-500 space-y-2">
-                  <p className="font-bold">💡 도움말</p>
-                  <p>• 첫 번째 행은 제목(헤더)이어야 합니다.</p>
-                  <p>• 이름과 금액 정보가 포함되어야 합니다.</p>
+                <div className="bg-blue-50 p-4 rounded-2xl text-xs text-blue-700 space-y-1.5">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-blue-500" />
+                    AI 가 열을 자동으로 매칭해줘요
+                  </p>
+                  <p>• 첫 번째 행은 제목(헤더)이어야 해요.</p>
+                  <p>• 형식이 달라도 이름·금액·날짜를 자동으로 인식해요.</p>
                 </div>
               </div>
             )}
 
             {step === 'mapping' && csvData && (
               <div className="space-y-6">
+                {aiState === 'mapping' && (
+                  <div className="p-3 bg-blue-50 rounded-xl flex items-center space-x-2 text-xs text-blue-700">
+                    <div className="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <span>AI 가 열을 분석하고 있어요...</span>
+                  </div>
+                )}
+                {aiState === 'success' && (
+                  <div className="p-3 bg-emerald-50 rounded-xl flex items-start space-x-2 text-xs text-emerald-700">
+                    <Sparkles size={14} className="text-emerald-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-bold">AI 자동 매칭 완료</p>
+                      <p className="mt-0.5 opacity-80">아래 결과를 확인하고 필요하면 수정해주세요.{aiReason ? ` (${aiReason})` : ''}</p>
+                    </div>
+                  </div>
+                )}
+                {aiState === 'failed' && (
+                  <div className="p-3 bg-amber-50 rounded-xl flex items-center justify-between text-xs text-amber-700">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle size={14} />
+                      <span>AI 매칭에 실패했어요. 직접 선택해주세요.</span>
+                    </div>
+                    <button
+                      onClick={() => csvData && runAiMapping(csvData)}
+                      className="px-2.5 py-1 bg-amber-100 rounded-lg font-bold hover:bg-amber-200 transition-colors"
+                    >
+                      다시 시도
+                    </button>
+                  </div>
+                )}
                 <p className="text-sm text-gray-500">엑셀의 열과 앱의 항목을 연결해주세요.</p>
                 <div className="space-y-4">
-                  <MappingSelect 
-                    label="이름 (필수)" 
-                    value={mapping.targetName} 
-                    headers={csvData.headers} 
-                    onChange={(idx) => handleMappingChange('targetName', idx)} 
+                  <MappingSelect
+                    label="이름 (필수)"
+                    value={mapping.targetName}
+                    headers={csvData.headers}
+                    onChange={(idx) => handleMappingChange('targetName', idx)}
                   />
-                  <MappingSelect 
-                    label="금액 (필수)" 
-                    value={mapping.amount} 
-                    headers={csvData.headers} 
-                    onChange={(idx) => handleMappingChange('amount', idx)} 
+                  <MappingSelect
+                    label="금액 (필수)"
+                    value={mapping.amount}
+                    headers={csvData.headers}
+                    onChange={(idx) => handleMappingChange('amount', idx)}
                   />
-                  <MappingSelect 
-                    label="날짜" 
-                    value={mapping.date} 
-                    headers={csvData.headers} 
-                    onChange={(idx) => handleMappingChange('date', idx)} 
+                  <MappingSelect
+                    label="날짜"
+                    value={mapping.date}
+                    headers={csvData.headers}
+                    onChange={(idx) => handleMappingChange('date', idx)}
                   />
-                  <MappingSelect 
-                    label="장소" 
-                    value={mapping.location} 
-                    headers={csvData.headers} 
-                    onChange={(idx) => handleMappingChange('location', idx)} 
+                  <MappingSelect
+                    label="경조사 종류 (결혼/부고/생일)"
+                    value={mapping.eventType}
+                    headers={csvData.headers}
+                    onChange={(idx) => handleMappingChange('eventType', idx)}
                   />
-                  <MappingSelect 
-                    label="관계" 
-                    value={mapping.relation} 
-                    headers={csvData.headers} 
-                    onChange={(idx) => handleMappingChange('relation', idx)} 
+                  <MappingSelect
+                    label="장소"
+                    value={mapping.location}
+                    headers={csvData.headers}
+                    onChange={(idx) => handleMappingChange('location', idx)}
+                  />
+                  <MappingSelect
+                    label="관계"
+                    value={mapping.relation}
+                    headers={csvData.headers}
+                    onChange={(idx) => handleMappingChange('relation', idx)}
                   />
                 </div>
                 <button
