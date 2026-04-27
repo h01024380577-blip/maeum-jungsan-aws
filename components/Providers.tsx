@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { Toaster } from "sonner";
 import { useStore } from "@/src/store/useStore";
 import Onboarding from "@/src/components/Onboarding";
-import { ThemeProvider } from "@/src/lib/theme";
+import { ThemeProvider, useTheme } from "@/src/lib/theme";
 
 const SKIP_ONBOARDING_PATHS = ['/terms', '/intro'];
 
 function InnerProviders({ children }: { children: React.ReactNode }) {
   const { loadFromSupabase, isLoaded, tossUserId } = useStore();
   const pathname = usePathname();
+  const { resolved } = useTheme();
 
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() =>
     typeof window !== 'undefined' && localStorage.getItem('heartbook-onboarding-seen') === 'true'
@@ -52,6 +54,35 @@ function InnerProviders({ children }: { children: React.ReactNode }) {
       {showOnboarding && (
         <Onboarding onComplete={handleOnboardingComplete} />
       )}
+      <Toaster
+        position="top-center"
+        theme={resolved}
+        richColors={false}
+        closeButton={false}
+        duration={2200}
+        offset={56}
+        style={{
+          fontFamily:
+            '"Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Inter", ui-sans-serif, system-ui, sans-serif',
+        }}
+        toastOptions={{
+          style: {
+            fontFamily:
+              '"Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Inter", ui-sans-serif, system-ui, sans-serif',
+          },
+          classNames: {
+            toast:
+              '!rounded-2xl !border !border-black/5 dark:!border-white/10 !shadow-lg !backdrop-blur-sm !px-4 !py-3 !text-[13px] !font-semibold',
+            success:
+              '!bg-emerald-50 !text-emerald-700 dark:!bg-emerald-950/70 dark:!text-emerald-200',
+            error:
+              '!bg-rose-50 !text-rose-700 dark:!bg-rose-950/70 dark:!text-rose-200',
+            info:
+              '!bg-blue-50 !text-blue-700 dark:!bg-blue-950/70 dark:!text-blue-200',
+            icon: '!mr-2',
+          },
+        }}
+      />
     </>
   );
 }

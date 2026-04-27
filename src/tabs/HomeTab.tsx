@@ -2,16 +2,11 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/src/lib/apiClient';
 import AdPromptDialog from '@/src/components/ads/AdPromptDialog';
-import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Wallet, Copy, LogIn } from 'lucide-react';
+import { Send, Sparkles, ArrowUpRight, ArrowDownLeft, Link as LinkIcon, Image as ImageIcon, Upload, X as CloseIcon, Heart, Flower2, Cake, Star, Plus, ChevronRight, Wallet, Copy, LogIn, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { useStore, EventEntry, EventType } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
-// 토스트는 useToast 훅으로 처리 (아래 컴포넌트에서 사용)
-let _toastSetter: ((t: { msg: string; type: 'success' | 'error' } | null) => void) | null = null;
-const toast = {
-  success: (m: string) => _toastSetter?.({ msg: m, type: 'success' }),
-  error: (m: string) => _toastSetter?.({ msg: m, type: 'error' }),
-};
+import { toast } from 'sonner';
 
 
 
@@ -128,9 +123,6 @@ export default function HomeTab() {
     router.push('/intro');
   };
   const { entries, addEntry, addFeedback, contacts, loadFromSupabase, tossUserId, refreshCredits } = useStore();
-  const [toastData, setToastData] = React.useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  React.useEffect(() => { _toastSetter = setToastData; return () => { _toastSetter = null; }; }, []);
-  React.useEffect(() => { if (toastData) { const t = setTimeout(() => setToastData(null), 2500); return () => clearTimeout(t); } }, [toastData]);
   const [inputText, setInputText] = useState('');
   const [inputUrl, setInputUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -214,15 +206,15 @@ export default function HomeTab() {
 
       if (!result.success) {
         if (result.reason === 'rate_limit') {
-          toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.');
+          toast.error('무료 분석 한도를 모두 이용하셨습니다. 잠시 후 다시 시도해 주세요.', { duration: 4000, icon: <AlertCircle size={16} /> });
         } else if (result.reason === 'temporarily_unavailable') {
-          toast.error(result.message || 'AI 서비스가 잠시 혼잡해요. 잠시 후 다시 시도해 주세요.');
+          toast.error(result.message || 'AI 서비스가 잠시 혼잡해요. 잠시 후 다시 시도해 주세요.', { duration: 3500, icon: <AlertCircle size={16} /> });
         } else if (result.reason === 'low_confidence') {
-          toast.error(result.message || '초대장 정보를 충분히 읽지 못했어요. 직접 입력을 이용해 주세요.');
+          toast.info(result.message || '초대장 정보를 충분히 읽지 못했어요. 직접 입력을 이용해 주세요.', { duration: 4000, icon: <Info size={16} /> });
         } else if (result.reason === 'no_credits') {
           setAdPromptOpen(true);
         } else {
-          toast.error('분석 실패. 직접 입력을 이용해 주세요.');
+          toast.error('분석 실패. 직접 입력을 이용해 주세요.', { duration: 3500, icon: <AlertCircle size={16} /> });
         }
         setSelectedImage(null); setInputUrl(''); setInputText('');
         setIsParsing(false);
@@ -265,7 +257,7 @@ export default function HomeTab() {
       const finalData = { ...parsed, targetName, suggestedNames, account, suggestedAccounts, date: normalizedDate, amount: parsed.amount || amt, recommendationReason: reason, type: parsed.type || 'EXPENSE', isIncome: parsed.type === 'INCOME', relation: parsed.relation || '친구' };
       setParsedData(finalData); setInitialParsedData(finalData); setShowBottomSheet(true);
     } catch (err: any) {
-      toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`);
+      toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`, { duration: 3500, icon: <AlertCircle size={16} /> });
       setSelectedImage(null); setInputUrl(''); setInputText('');
     } finally {
       setIsParsing(false);
@@ -294,7 +286,7 @@ export default function HomeTab() {
         const { generateHapticFeedback } = await import('@apps-in-toss/web-framework');
         generateHapticFeedback({ type: 'success' });
       }
-      toast.success('저장 완료!');
+      toast.success('저장 완료!', { duration: 1800, icon: <CheckCircle2 size={16} /> });
 
       // 계좌번호가 있으면 토스페이 송금 모달 표시
       if (fd.account && fd.account.trim() && fd.type !== 'INCOME') {
@@ -304,7 +296,7 @@ export default function HomeTab() {
       setShowBottomSheet(false); setInputText(''); setInputUrl(''); setSelectedImage(null); setParsedData(null); setInitialParsedData(null);
     } catch (err: any) {
       console.error('Save failed:', err);
-      toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`);
+      toast.error(`저장 실패: ${err?.message || '알 수 없는 오류'}`, { duration: 3500, icon: <AlertCircle size={16} /> });
     }
   };
 
@@ -312,20 +304,6 @@ export default function HomeTab() {
 
   return (
     <div className="pb-4">
-      {/* Toast */}
-      <AnimatePresence>
-        {toastData && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={`fixed top-14 left-1/2 -translate-x-1/2 px-5 py-3 rounded-2xl text-white text-xs font-bold z-[9999] shadow-lg ${toastData.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
-          >
-            {toastData.msg}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header — 프로필은 MY 탭으로 이관. 비로그인만 로그인 CTA 노출 */}
       <div className="px-5 pt-14 pb-6 bg-white">
         {!tossUserId && (
@@ -565,8 +543,8 @@ export default function HomeTab() {
                       <button onClick={async () => {
                         try {
                           await copyToClipboard(parsedData.account || '');
-                          toast.success('계좌번호가 복사되었습니다');
-                        } catch { toast.error('복사 실패'); }
+                          toast.success('계좌번호가 복사되었습니다', { duration: 1600, icon: <Copy size={16} /> });
+                        } catch { toast.error('복사 실패', { duration: 2500, icon: <AlertCircle size={16} /> }); }
                       }} className="px-3 py-3 bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center space-x-1 active:scale-95 transition-all shrink-0">
                         <Copy size={12} /><span>복사</span>
                       </button>
@@ -626,7 +604,7 @@ export default function HomeTab() {
                   <button onClick={async () => {
                     try {
                       await copyToClipboard(savedAccount);
-                      toast.success('계좌번호가 복사되었습니다');
+                      toast.success('계좌번호가 복사되었습니다', { duration: 1600, icon: <Copy size={16} /> });
                       setShowTransferModal(false);
                       setTimeout(async () => {
                         // 토스 앱 송금 화면으로 이동
@@ -642,7 +620,7 @@ export default function HomeTab() {
                         }
                       }, 300);
                     } catch {
-                      toast.error('토스 앱을 열 수 없습니다.');
+                      toast.error('토스 앱을 열 수 없습니다.', { duration: 3000, icon: <AlertCircle size={16} /> });
                     }
                   }} className="flex-[2] py-3.5 bg-blue-500 text-white rounded-xl font-bold text-sm active:scale-95 transition-all shadow-lg shadow-blue-200">
                     토스로 송금하기
