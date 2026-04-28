@@ -3,7 +3,11 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useStore } from '../store/useStore';
 import { format, isSameDay, parseISO } from 'date-fns';
-import { Heart, Flower2, Cake, Star, MapPin } from 'lucide-react';
+import { Heart, Flower2, Cake, Star, MapPin, CalendarPlus, CheckCircle2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { exportEventToCalendar, exportAllEventsToCalendar } from '../lib/exportToCalendar';
+import { isSamsungGalaxyDevice, hasSeenSamsungCalendarHint, markSamsungCalendarHintSeen } from '../lib/platformDetect';
+import SamsungCalendarHintDialog from '../components/SamsungCalendarHintDialog';
 
 const eventIcon = (t: string, size = 12) => {
   if (t === 'wedding') return <Heart size={size} className="text-pink-500 fill-pink-500" />;
@@ -15,6 +19,87 @@ const eventIcon = (t: string, size = 12) => {
 export default function CalendarTab() {
   const { entries } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportingAll, setExportingAll] = useState(false);
+
+  // Samsung Galaxy 안내 모달 — 첫 캘린더 export 시도 시 1회 노출
+  const [samsungHintOpen, setSamsungHintOpen] = useState(false);
+  // 모달 confirm/dismiss 후 실제 실행할 export action 보존
+  const [pendingExport, setPendingExport] = useState<null | (() => Promise<void>)>(null);
+
+  const errorMessage = (code: string): string => {
+    if (code === 'no_events') return '내보낼 일정이 없어요';
+    if (code === 'Unauthorized') return '로그인이 필요해요';
+    if (code === 'not_found') return '해당 일정을 찾을 수 없어요';
+    return '일정 내보내기에 실패했어요';
+  };
+
+  const successToast = (message: string) =>
+    toast.success(message, {
+      icon: <CheckCircle2 size={18} className="text-emerald-600" />,
+      duration: 1800,
+    });
+  const errorToast = (code: string) =>
+    toast.error(errorMessage(code), {
+      icon: <AlertCircle size={18} className="text-rose-600" />,
+      duration: 2800,
+    });
+
+  /** Samsung Galaxy + 처음이면 안내 모달 띄우고 confirm/dismiss 후 action 실행. 그 외엔 즉시 실행. */
+  const runWithSamsungHint = async (action: () => Promise<void>) => {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    if (isSamsungGalaxyDevice(ua) && !hasSeenSamsungCalendarHint()) {
+      setPendingExport(() => action);
+      setSamsungHintOpen(true);
+      return;
+    }
+    await action();
+  };
+
+  const handleExportOne = (eventId: string) => {
+    if (exportingId || exportingAll) return;
+    return runWithSamsungHint(async () => {
+      setExportingId(eventId);
+      try {
+        const res = await exportEventToCalendar(eventId);
+        successToast(`${res.fileName} 다운로드를 시작했어요`);
+      } catch (err) {
+        errorToast(err instanceof Error ? err.message : 'unknown');
+      } finally {
+        setExportingId(null);
+      }
+    });
+  };
+
+  const handleExportAll = () => {
+    if (exportingAll || exportingId) return;
+    return runWithSamsungHint(async () => {
+      setExportingAll(true);
+      try {
+        const res = await exportAllEventsToCalendar();
+        successToast(`${res.eventCount}개 일정을 캘린더로 보낼게요`);
+      } catch (err) {
+        errorToast(err instanceof Error ? err.message : 'unknown');
+      } finally {
+        setExportingAll(false);
+      }
+    });
+  };
+
+  const handleSamsungHintConfirm = async () => {
+    markSamsungCalendarHintSeen();
+    setSamsungHintOpen(false);
+    const action = pendingExport;
+    setPendingExport(null);
+    if (action) await action();
+  };
+
+  const handleSamsungHintDismiss = async () => {
+    setSamsungHintOpen(false);
+    const action = pendingExport;
+    setPendingExport(null);
+    if (action) await action();
+  };
 
   const getDateEntries = (date: Date) => entries.filter(e => {
     try { return e.date && isSameDay(parseISO(e.date), date); } catch { return false; }
@@ -37,9 +122,28 @@ export default function CalendarTab() {
 
   return (
     <div className="pb-4">
+      <SamsungCalendarHintDialog
+        isOpen={samsungHintOpen}
+        onConfirm={handleSamsungHintConfirm}
+        onDismiss={handleSamsungHintDismiss}
+      />
       <div className="px-5 pt-14 pb-4 bg-white">
-        <h1 className="text-[22px] font-black text-gray-900 tracking-tight">경조사 달력</h1>
-        <p className="text-xs text-gray-400 mt-0.5">날짜를 선택해서 일정을 확인하세요</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-[22px] font-black text-gray-900 tracking-tight">경조사 달력</h1>
+            <p className="text-xs text-gray-400 mt-0.5">날짜를 선택해서 일정을 확인하세요</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportAll}
+            disabled={exportingAll || !!exportingId}
+            className="mt-1 flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-600 active:bg-blue-100 disabled:opacity-50"
+            aria-label="모든 경조사 일정을 캘린더로 내보내기"
+          >
+            <CalendarPlus size={12} />
+            {exportingAll ? '준비 중…' : '캘린더로'}
+          </button>
+        </div>
       </div>
 
       <div className="px-5 pt-4 space-y-4">
@@ -76,6 +180,16 @@ export default function CalendarTab() {
                     {e.type === 'INCOME' ? '+' : '-'}{e.amount.toLocaleString()}
                   </p>
                   <p className="text-[10px] text-gray-400 font-medium">{e.relation}</p>
+                  <button
+                    type="button"
+                    onClick={() => handleExportOne(e.id)}
+                    disabled={exportingId === e.id || exportingAll}
+                    className="mt-1 inline-flex items-center gap-0.5 rounded-md bg-gray-50 px-1.5 py-0.5 text-[9px] font-medium text-gray-500 active:bg-gray-100 disabled:opacity-50"
+                    aria-label={`${e.targetName} 일정을 캘린더로 내보내기`}
+                  >
+                    <CalendarPlus size={9} />
+                    {exportingId === e.id ? '…' : '캘린더'}
+                  </button>
                 </div>
               </div>
             ))
