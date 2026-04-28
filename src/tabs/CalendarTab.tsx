@@ -34,10 +34,11 @@ export default function CalendarTab() {
     return '일정 내보내기에 실패했어요';
   };
 
-  const successToast = (message: string) =>
+  const successToast = (message: string, description?: string) =>
     toast.success(message, {
+      description,
       icon: <CheckCircle2 size={18} className="text-emerald-600" />,
-      duration: 1800,
+      duration: description ? 3000 : 1800,
     });
   const errorToast = (code: string) =>
     toast.error(errorMessage(code), {
@@ -47,6 +48,8 @@ export default function CalendarTab() {
 
   /** Samsung Galaxy + 처음이면 안내 모달 띄우고 confirm/dismiss 후 action 실행. 그 외엔 즉시 실행. */
   const runWithSamsungHint = async (action: () => Promise<void>) => {
+    // 모달 이미 떠있으면 첫 pendingExport 보존 위해 무시
+    if (samsungHintOpen) return;
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
     if (isSamsungGalaxyDevice(ua) && !hasSeenSamsungCalendarHint()) {
       setPendingExport(() => action);
@@ -62,7 +65,10 @@ export default function CalendarTab() {
       setExportingId(eventId);
       try {
         const res = await exportEventToCalendar(eventId);
-        successToast(`${res.fileName} 다운로드를 시작했어요`);
+        const desc = res.via === 'ait-openurl'
+          ? '브라우저에서 다운로드 받은 뒤 캘린더 앱에서 열어주세요'
+          : undefined;
+        successToast(`'${res.fileName}' 캘린더 파일을 받아요`, desc);
       } catch (err) {
         errorToast(err instanceof Error ? err.message : 'unknown');
       } finally {
@@ -77,7 +83,10 @@ export default function CalendarTab() {
       setExportingAll(true);
       try {
         const res = await exportAllEventsToCalendar();
-        successToast(`${res.eventCount}개 일정을 캘린더로 보낼게요`);
+        const desc = res.via === 'ait-openurl'
+          ? '브라우저에서 다운로드 받은 뒤 캘린더 앱에서 열어주세요'
+          : undefined;
+        successToast(`${res.eventCount}개 일정의 캘린더 파일을 받아요`, desc);
       } catch (err) {
         errorToast(err instanceof Error ? err.message : 'unknown');
       } finally {
