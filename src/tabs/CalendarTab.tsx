@@ -66,7 +66,7 @@ export default function CalendarTab() {
       try {
         const res = await exportEventToCalendar(eventId);
         const desc = res.via === 'ait-openurl'
-          ? '브라우저에서 다운로드 받은 뒤 캘린더 앱에서 열어주세요'
+          ? '브라우저 안내를 따라 캘린더에 추가하세요'
           : undefined;
         successToast(`'${res.fileName}' 캘린더 파일을 받아요`, desc);
       } catch (err) {
@@ -84,7 +84,7 @@ export default function CalendarTab() {
       try {
         const res = await exportAllEventsToCalendar();
         const desc = res.via === 'ait-openurl'
-          ? '브라우저에서 다운로드 받은 뒤 캘린더 앱에서 열어주세요'
+          ? '브라우저 안내를 따라 캘린더에 추가하세요'
           : undefined;
         successToast(`${res.eventCount}개 일정의 캘린더 파일을 받아요`, desc);
       } catch (err) {

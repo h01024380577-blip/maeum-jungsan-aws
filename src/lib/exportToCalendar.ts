@@ -35,18 +35,27 @@ async function requestIcs(
 }
 
 async function openInSystemBrowser(url: string): Promise<'ait-openurl' | 'browser-redirect'> {
-  // 1) AIT openURL — 시스템 브라우저로 위임 (CSV export 와 동일 패턴)
+  // AIT openURL — 시스템 브라우저로 위임.
+  // Android 는 Chrome 빈 화면 + 다운로드 알림만 떠서 사용자가 다음 단계를 모름 → landing 안내 페이지 거침.
+  // iOS Safari 는 text/calendar inline disposition 으로 즉시 native 캘린더 sheet 발화하므로 직접 다운로드 URL 유지.
   try {
     const mod = await import('@apps-in-toss/web-framework');
-    const m = mod as { openURL?: (url: string) => Promise<void> };
+    const m = mod as {
+      openURL?: (url: string) => Promise<void>;
+      getPlatformOS?: () => string;
+    };
     if (typeof m.openURL === 'function') {
-      await m.openURL(url);
+      const platform = typeof m.getPlatformOS === 'function' ? m.getPlatformOS() : 'unknown';
+      const targetUrl = platform === 'android'
+        ? url.replace('/api/export/download/', '/api/calendar/landing/')
+        : url;
+      await m.openURL(targetUrl);
       return 'ait-openurl';
     }
   } catch (err) {
     console.warn('[ics] AIT openURL 실패, 브라우저 폴백 시도:', err);
   }
-  // 2) 브라우저 폴백 — 같은 창에서 attachment 다운로드 트리거
+  // 브라우저 폴백 — 같은 창에서 attachment 다운로드 트리거 (안내 페이지 우회)
   if (typeof window !== 'undefined') {
     window.location.href = url;
     return 'browser-redirect';
