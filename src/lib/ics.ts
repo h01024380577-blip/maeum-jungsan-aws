@@ -17,7 +17,7 @@ export interface EventLike {
   sourceUrl?: string | null;
 }
 
-const EVENT_TYPE_KO: Record<EventTypeLike, string> = {
+export const EVENT_TYPE_KO: Record<EventTypeLike, string> = {
   WEDDING: '결혼식',
   FUNERAL: '장례식',
   BIRTHDAY: '생일',
