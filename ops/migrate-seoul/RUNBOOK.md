@@ -36,8 +36,9 @@ scp provision-seoul.sh ec2-user@<새IP>:~ && ssh ec2-user@<새IP> ./provision-se
 ```
 - node 22 + pm2 + nginx + certbot 설치, 레포 clone, nginx 리버스 프록시 구성.
 
-### 3. .env 이식
+### 3. .env + 디스크 시크릿 이식
 - 기존 서버 `~/maeum-jungsan-aws/.env` 복사 → `DATABASE_URL`/`DIRECT_URL`만 새 서울 Supabase 값으로 교체.
+- **⚠️ git/.env 밖의 디스크 시크릿도 반드시 복사**: `~/maeum-jungsan-aws/certs/`(mTLS: `maeum-jungsan_private.key` + `maeum-jungsan_public.crt`, 권한 600). 이게 없으면 토스 API mTLS 호출이 전부 실패해 **로그인이 503 "토스 서버 연결 실패"** 로 깨진다(2026-06-13 실제 발생). `src/lib/tossApiClient.ts`가 `process.cwd()/certs` 기본 경로에서 읽음.
 
 ### 4. TLS 무중단 이식
 - 기존 서버 `/etc/letsencrypt`(live/archive/renewal)를 새 서버로 복사 → DNS 전환 전에 HTTPS 즉시 동작.
@@ -53,6 +54,10 @@ pm2 start npm --name maeum-jungsan -- start && pm2 save && pm2 startup
 ```bash
 curl -sk https://<새IP>/api/health -H 'Host: maeum-jungsan.duckdns.org'
 # {"ok":true, db ok} 확인 + /api/auth/me 401 응답속도 확인
+# ⚠️ health(DB·env)만으론 부족 — 토스 mTLS 경로 스모크 필수:
+curl -s https://maeum-jungsan.duckdns.org/api/auth/toss -X POST \
+  -H 'Content-Type: application/json' -d '{"authorizationCode":"dummy","referrer":"DEFAULT"}'
+# 기대: 401 TOKEN_FAILED (mTLS 도달 OK). 503 NETWORK_ERROR면 certs/ 누락(위 3단계).
 ```
 
 ### 7. 컷오버

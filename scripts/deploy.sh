@@ -2,23 +2,29 @@
 # 자동 배포 스크립트: push → EC2 pull + rebuild + restart (+ AIT 번들 재생성)
 set -e
 
-EC2_HOST=maeum-jungsan-personal
+EC2_HOST=maeum-jungsan-seoul
 # Remote 경로 — 로컬에서 ~ 확장 방지 위해 $HOME 사용
 EC2_DIR='$HOME/maeum-jungsan-aws'
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # --- 1. Git push ---
-echo "📤 Pushing to remote..."
+# aws(GitHub): 소스 백업/원본. seoul(EC2): receive.denyCurrentBranch=updateInstead 로
+# 푸시 즉시 원격 워킹트리가 갱신된다(서버가 GitHub에서 pull 하지 않음 — 서버에 git 인증 불필요).
+echo "📤 Pushing to remotes (aws=GitHub, seoul=EC2)..."
 cd "$LOCAL_DIR"
 git push aws main
+# seoul(EC2) updateInstead 푸시는 워킹트리에 변경이 있으면 거부됨.
+# npm install이 남기는 package-lock.json 변경을 푸시 전에 자동 정리.
+ssh "$EC2_HOST" "bash -lc 'cd $EC2_DIR && git checkout -- package-lock.json 2>/dev/null || true'"
+git push seoul main
 
-# --- 2. EC2 pull + install + build + restart ---
+# --- 2. EC2 install + build + restart ---
+# 워킹트리는 위 seoul 푸시로 이미 갱신됨(별도 pull 없음).
 # npm install: package-lock 변경(신규 의존성) 대응. 변경 없으면 빠르게 패스.
 # pm2 --update-env: .env 파일 변경도 프로세스에 반영되도록 강제.
 echo "🖥️  Updating EC2 server..."
 ssh "$EC2_HOST" "bash -lc 'set -euo pipefail
 cd $EC2_DIR
-git pull origin main
 npm install --legacy-peer-deps 2>&1 | tail -3
 npm cache clean --force >/dev/null 2>&1 || true
 rm -rf .next
@@ -32,7 +38,7 @@ npx prisma db execute --file prisma/manual-migrations/2026-05-15_add_payment_ord
 npx prisma db execute --file prisma/manual-migrations/2026-06-20_remove_credits_add_consumed.sql --url \"\$DIRECT_URL\"
 npx prisma db execute --file prisma/manual-migrations/2026-06-20_add_premium_iap.sql --url \"\$DIRECT_URL\"
 npx prisma generate
-NODE_OPTIONS=--max-old-space-size=1024 npm run build:next 2>&1 | tail -3
+NODE_OPTIONS=--max-old-space-size=2048 npm run build:next 2>&1 | tail -3
 pm2 restart maeum-jungsan --update-env'"
 
 # --- 2.5. Smoke test: 새 배포가 정상 부팅됐는지 확인 ---
