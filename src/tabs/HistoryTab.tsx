@@ -162,7 +162,7 @@ export default function HistoryTab() {
   });
 
   return (
-    <div className="pb-4">
+    <div className="pb-[calc(env(safe-area-inset-bottom,0px)+88px)]">
       <div className="px-5 pt-14 pb-4 bg-white max-[360px]:px-4">
         <div className="flex items-center justify-between gap-2 max-[360px]:gap-1.5">
           <div className="min-w-0">

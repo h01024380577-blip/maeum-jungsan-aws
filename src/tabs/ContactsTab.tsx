@@ -242,14 +242,14 @@ export default function ContactsTab() {
 
   if (selectedContactId) {
     return (
-      <div className="px-5 pt-14 pb-4">
+      <div className="px-5 pt-14 pb-[calc(env(safe-area-inset-bottom,0px)+88px)]">
         <ContactDetail contactId={selectedContactId} onBack={() => setSelectedContactId(null)} />
       </div>
     );
   }
 
   return (
-    <div ref={rootRef} className="pb-4">
+    <div ref={rootRef} className="pb-[calc(env(safe-area-inset-bottom,0px)+88px)]">
       <div className="px-5 pt-14 pb-4 bg-white">
         <div className="flex items-center justify-between">
           <div className="min-w-0">

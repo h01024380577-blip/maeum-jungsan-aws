@@ -74,12 +74,8 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
     }
   }, []);
 
-  useEffect(() => {
-    if (!isAppsInToss()) return;
-    import('@apps-in-toss/web-framework').then((sdk: any) => {
-      sdk.setNavigationBar?.({ title: '마음정산', visible: true });
-    });
-  }, []);
+  // 내비게이션바(로고·앱 이름)는 앱인토스 콘솔 + granite.config.ts brand 설정으로만 제어된다.
+  // web-bridge SDK에 setNavigationBar 류의 API는 없으므로 클라이언트에서 덮어쓰지 않는다.
 
   return (
     <div className="min-h-screen bg-zinc-900 flex items-center justify-center md:py-6">
@@ -100,9 +96,9 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
           </motion.div>
         </main>
 
-        {/* Bottom Navigation */}
-        <nav className="shrink-0 bg-white border-t border-gray-100 safe-bottom z-50">
-          <div className="flex justify-around items-center pt-2.5 pb-2 px-3">
+        {/* Bottom Navigation — 토스 미니앱 가이드: 플로팅 형태 탭바 (토스 기본 하단 탭과 형태가 겹치지 않도록) */}
+        <nav className="pointer-events-none absolute inset-x-0 bottom-0 z-50 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
+          <div className="pointer-events-auto mx-auto flex max-w-[380px] items-center justify-around rounded-full bg-white px-1.5 shadow-[0_6px_20px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.06)]">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.key;
               const Icon = tab.icon;
@@ -110,15 +106,9 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
                 <button
                   key={tab.key}
                   onClick={() => router.push(tab.path)}
-                  className="relative flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all active:scale-90"
+                  aria-current={isActive ? 'page' : undefined}
+                  className="flex flex-1 flex-col items-center justify-center rounded-full py-2 transition-transform active:scale-90"
                 >
-                  {isActive && (
-                    <motion.div
-                      layoutId="nav-pill"
-                      className="absolute -top-2.5 w-5 h-[3px] bg-blue-500 rounded-full"
-                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                    />
-                  )}
                   <Icon
                     size={21}
                     strokeWidth={isActive ? 2.4 : 1.6}
