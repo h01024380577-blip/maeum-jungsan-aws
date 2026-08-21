@@ -6,7 +6,7 @@ import Providers from "@/components/Providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "마음정산",
+  title: "경조사 가계부",
   description: "AI 기반 스마트 경조사 관리 서비스",
 };
 

@@ -3,7 +3,7 @@ import { defineConfig } from '@apps-in-toss/web-framework/config';
 export default defineConfig({
   appName: 'maeum-jungsan',
   brand: {
-    displayName: '마음정산',
+    displayName: '경조사 가계부',
     primaryColor: '#3B82F6',
     icon: 'https://maeum-jungsan.duckdns.org/icon.png',
   },
