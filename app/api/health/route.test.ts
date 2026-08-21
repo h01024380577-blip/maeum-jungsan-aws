@@ -10,7 +10,7 @@ describe('/api/health response body', () => {
   it('redacts diagnostic details for public responses', () => {
     const body = buildHealthBody(
       checks,
-      ['NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT'],
+      ['NEXT_PUBLIC_AD_GROUP_ID_REWARDED'],
       false,
       '2026-05-15T00:00:00.000Z',
     );
@@ -50,7 +50,7 @@ describe('/api/health response body', () => {
   it('keeps diagnostic details for authorized internal responses', () => {
     const body = buildHealthBody(
       checks,
-      ['NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT'],
+      ['NEXT_PUBLIC_AD_GROUP_ID_REWARDED'],
       true,
       '2026-05-15T00:00:00.000Z',
     );
@@ -58,7 +58,7 @@ describe('/api/health response body', () => {
     expect(body).toEqual({
       ok: false,
       checks,
-      optionalMissing: ['NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT'],
+      optionalMissing: ['NEXT_PUBLIC_AD_GROUP_ID_REWARDED'],
       timestamp: '2026-05-15T00:00:00.000Z',
     });
   });

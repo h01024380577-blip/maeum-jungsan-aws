@@ -13,21 +13,26 @@ export const CREDITS_CONFIG = {
   },
 } as const;
 
-function configuredRewardAdGroupId(rewardType: RewardType): string {
-  return rewardType === 'AI_CREDIT'
-    ? process.env.NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT ?? ''
-    : process.env.NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT ?? '';
+/**
+ * 배포 전환 구간(서버 선반영 → AIT 번들 업로드 전)에 구 번들이 보내는 예전
+ * 광고그룹 ID를 한시적으로 허용하기 위한 서버 전용 allowlist. 쉼표 구분.
+ * 신규 번들이 스토어에 완전히 반영되면 이 값을 비운다.
+ */
+function rolloverAllowedAdGroupIds(): string[] {
+  return (process.env.AD_GROUP_ID_ROLLOVER_ALLOW ?? '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
 }
 
-export function isAllowedRewardAdGroupId(
-  rewardType: RewardType,
-  adGroupId: string,
-): boolean {
+export function isAllowedRewardAdGroupId(adGroupId: string): boolean {
   const normalized = adGroupId.trim();
   if (!normalized) return false;
 
-  const configured = configuredRewardAdGroupId(rewardType);
+  const configured = (process.env.NEXT_PUBLIC_AD_GROUP_ID_REWARDED ?? '').trim();
   if (configured && normalized === configured) return true;
+
+  if (rolloverAllowedAdGroupIds().includes(normalized)) return true;
 
   return process.env.NODE_ENV !== 'production' && normalized === TEST_REWARDED_AD_GROUP_ID;
 }

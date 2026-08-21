@@ -108,8 +108,7 @@ describe('listMissingOptional', () => {
   it('returns empty when all optional keys are set', () => {
     const env = {
       TOSS_MSG_TEMPLATE_CODE: 'tpl',
-      NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT: 'g1',
-      NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT: 'g2',
+      NEXT_PUBLIC_AD_GROUP_ID_REWARDED: 'g1',
       NEXT_PUBLIC_AD_GROUP_ID_STATS_BANNER: 'g3',
       NEXT_PUBLIC_API_URL: 'https://x',
     };
@@ -119,16 +118,14 @@ describe('listMissingOptional', () => {
   it('returns missing/empty optional keys', () => {
     const env = {
       TOSS_MSG_TEMPLATE_CODE: 'tpl',
-      NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT: '',
-      // NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT undefined
+      NEXT_PUBLIC_AD_GROUP_ID_REWARDED: '',
       // NEXT_PUBLIC_AD_GROUP_ID_STATS_BANNER undefined
       NEXT_PUBLIC_API_URL: 'https://x',
     };
     const missing = listMissingOptional(env);
     expect(missing).toEqual(
       expect.arrayContaining([
-        'NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT',
-        'NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT',
+        'NEXT_PUBLIC_AD_GROUP_ID_REWARDED',
         'NEXT_PUBLIC_AD_GROUP_ID_STATS_BANNER',
       ]),
     );

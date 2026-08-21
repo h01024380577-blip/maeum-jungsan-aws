@@ -24,40 +24,34 @@ describe('getAdGroupId', () => {
     process.env = originalEnv;
   });
 
-  it('returns configured reward ad group IDs', () => {
+  it('returns the single configured reward ad group ID', () => {
     process.env = {
       ...originalEnv,
       NODE_ENV: 'production',
-      NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT: ' ai-live ',
-      NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT: 'csv-live',
+      NEXT_PUBLIC_AD_GROUP_ID_REWARDED: ' rewarded-live ',
     };
 
-    expect(getAdGroupId('AI_CREDIT')).toBe('ai-live');
-    expect(getAdGroupId('CSV_CREDIT')).toBe('csv-live');
+    expect(getAdGroupId()).toBe('rewarded-live');
   });
 
   it('does not fall back to test ad IDs in production', () => {
     process.env = {
       ...originalEnv,
       NODE_ENV: 'production',
-      NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT: '',
-      NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT: '',
+      NEXT_PUBLIC_AD_GROUP_ID_REWARDED: '',
     };
 
-    expect(getAdGroupId('AI_CREDIT')).toBe('');
-    expect(getAdGroupId('CSV_CREDIT')).toBe('');
+    expect(getAdGroupId()).toBe('');
   });
 
   it('keeps the Apps-in-Toss test ID fallback outside production', () => {
     process.env = {
       ...originalEnv,
       NODE_ENV: 'test',
-      NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT: '',
-      NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT: '',
+      NEXT_PUBLIC_AD_GROUP_ID_REWARDED: '',
     };
 
-    expect(getAdGroupId('AI_CREDIT')).toBe('ait-ad-test-rewarded-id');
-    expect(getAdGroupId('CSV_CREDIT')).toBe('ait-ad-test-rewarded-id');
+    expect(getAdGroupId()).toBe('ait-ad-test-rewarded-id');
   });
 });
 

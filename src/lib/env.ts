@@ -78,8 +78,7 @@ export function formatValidationFailure(result: Extract<EnvValidationResult, { o
  */
 const OPTIONAL_ENV_KEYS = [
   'TOSS_MSG_TEMPLATE_CODE',
-  'NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT',
-  'NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT',
+  'NEXT_PUBLIC_AD_GROUP_ID_REWARDED',
   'NEXT_PUBLIC_AD_GROUP_ID_STATS_BANNER',
   'NEXT_PUBLIC_API_URL',
 ] as const;

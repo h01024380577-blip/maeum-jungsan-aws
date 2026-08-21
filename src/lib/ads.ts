@@ -4,16 +4,14 @@
  * - 화면 진입 시 preload → 사용자 클릭 시 show → 다음 preload 순서 강제
  */
 
-import type { RewardType } from '@prisma/client';
-
 const TEST_REWARDED_AD_GROUP_ID = 'ait-ad-test-rewarded-id';
 
-export function getAdGroupId(rewardType: RewardType): string {
-  const configured =
-    rewardType === 'AI_CREDIT'
-      ? process.env.NEXT_PUBLIC_AD_GROUP_ID_AI_CREDIT
-      : process.env.NEXT_PUBLIC_AD_GROUP_ID_CSV_CREDIT;
-
+/**
+ * 리워드 광고그룹 ID. AI 분석·CSV 대량입력 모두 단일 그룹을 공유한다.
+ * (RewardType은 서버 측 권한 스코프로만 남고, 광고그룹은 하나다.)
+ */
+export function getAdGroupId(): string {
+  const configured = process.env.NEXT_PUBLIC_AD_GROUP_ID_REWARDED;
   if (configured?.trim()) return configured.trim();
   return process.env.NODE_ENV === 'production' ? '' : TEST_REWARDED_AD_GROUP_ID;
 }

@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       const grant = await tx.adRewardGrant.findUnique({ where: { rewardNonce: nonce } });
       if (!grant) throw new Error('nonce_not_found_after_claim');
 
-      if (!isAllowedRewardAdGroupId(grant.rewardType, grant.adGroupId)) {
+      if (!isAllowedRewardAdGroupId(grant.adGroupId)) {
         await tx.adRewardGrant.update({
           where: { id: grant.id },
           data: { status: 'REJECTED' },

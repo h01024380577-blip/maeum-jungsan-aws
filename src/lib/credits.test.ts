@@ -1,10 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   CREDITS_CONFIG,
   looksLikeTossUserKey,
   normalizeGuestDeviceId,
   consumeAdPermission,
   restoreAdPermission,
+  isAllowedRewardAdGroupId,
 } from './credits';
 
 vi.mock('@/src/lib/prisma', () => ({
@@ -21,6 +22,51 @@ describe('CREDITS_CONFIG', () => {
   it('has nonce TTL and active nonce limit for replay protection', () => {
     expect(CREDITS_CONFIG.ad.nonceTtlMs).toBeGreaterThan(0);
     expect(CREDITS_CONFIG.ad.activeNonceLimit).toBeGreaterThan(0);
+  });
+});
+
+describe('isAllowedRewardAdGroupId', () => {
+  const originalEnv = process.env;
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('accepts the single configured rewarded ad group ID', () => {
+    process.env = {
+      ...originalEnv,
+      NODE_ENV: 'production',
+      NEXT_PUBLIC_AD_GROUP_ID_REWARDED: 'ait.v2.live.new',
+      AD_GROUP_ID_ROLLOVER_ALLOW: '',
+    };
+
+    expect(isAllowedRewardAdGroupId(' ait.v2.live.new ')).toBe(true);
+    expect(isAllowedRewardAdGroupId('ait.v2.live.other')).toBe(false);
+    expect(isAllowedRewardAdGroupId('')).toBe(false);
+  });
+
+  it('accepts rollover IDs while the old bundle is still live', () => {
+    process.env = {
+      ...originalEnv,
+      NODE_ENV: 'production',
+      NEXT_PUBLIC_AD_GROUP_ID_REWARDED: 'ait.v2.live.new',
+      AD_GROUP_ID_ROLLOVER_ALLOW: 'ait.v2.live.old1, ait.v2.live.old2',
+    };
+
+    expect(isAllowedRewardAdGroupId('ait.v2.live.old1')).toBe(true);
+    expect(isAllowedRewardAdGroupId('ait.v2.live.old2')).toBe(true);
+    expect(isAllowedRewardAdGroupId('ait.v2.live.old3')).toBe(false);
+  });
+
+  it('rejects the test ad group ID in production', () => {
+    process.env = {
+      ...originalEnv,
+      NODE_ENV: 'production',
+      NEXT_PUBLIC_AD_GROUP_ID_REWARDED: 'ait.v2.live.new',
+      AD_GROUP_ID_ROLLOVER_ALLOW: '',
+    };
+
+    expect(isAllowedRewardAdGroupId('ait-ad-test-rewarded-id')).toBe(false);
   });
 });
 

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   if (!adGroupId) {
     return withCors(req, NextResponse.json({ error: 'missing_ad_group_id' }, { status: 400 }));
   }
-  if (!isAllowedRewardAdGroupId(rewardType, adGroupId)) {
+  if (!isAllowedRewardAdGroupId(adGroupId)) {
     return withCors(req, NextResponse.json({ error: 'invalid_ad_group_id' }, { status: 400 }));
   }
 

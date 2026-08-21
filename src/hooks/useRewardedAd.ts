@@ -18,7 +18,7 @@ import type { RewardType } from '@prisma/client';
  * - watch(): nonce 발급 → 광고 재생 → redeem → nonce 반환. 실패/취소 시 null(사유는 토스트).
  */
 export function useRewardedAd(rewardType: RewardType) {
-  const adGroupId = getAdGroupId(rewardType);
+  const adGroupId = getAdGroupId();
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
 
