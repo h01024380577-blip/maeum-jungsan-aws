@@ -97,7 +97,7 @@ export default function Layout({ children, activeTab }: { children: React.ReactN
         </main>
 
         {/* Bottom Navigation — 토스 미니앱 가이드: 플로팅 형태 탭바 (토스 기본 하단 탭과 형태가 겹치지 않도록) */}
-        <nav className="pointer-events-none absolute inset-x-0 bottom-0 z-50 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+10px)]">
+        <nav className="pointer-events-none absolute inset-x-0 bottom-0 z-50 px-6 pb-[var(--tabbar-gap)]">
           <div className="pointer-events-auto mx-auto flex max-w-[380px] items-center justify-around rounded-full bg-white px-1.5 shadow-[0_6px_20px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.06)]">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.key;

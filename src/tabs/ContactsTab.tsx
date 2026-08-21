@@ -242,14 +242,14 @@ export default function ContactsTab() {
 
   if (selectedContactId) {
     return (
-      <div className="px-5 pt-14 pb-[calc(env(safe-area-inset-bottom,0px)+88px)]">
+      <div className="px-5 pt-14 pb-[var(--tabbar-space)]">
         <ContactDetail contactId={selectedContactId} onBack={() => setSelectedContactId(null)} />
       </div>
     );
   }
 
   return (
-    <div ref={rootRef} className="pb-[calc(env(safe-area-inset-bottom,0px)+88px)]">
+    <div ref={rootRef} className="pb-[var(--tabbar-space)]">
       <div className="px-5 pt-14 pb-4 bg-white">
         <div className="flex items-center justify-between">
           <div className="min-w-0">
@@ -518,7 +518,7 @@ export default function ContactsTab() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96 }}
             transition={{ duration: 0.16 }}
-            className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] right-5 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-200 active:scale-95 md:right-[calc((100vw-430px)/2+24px)]"
+            className="fixed bottom-[var(--tabbar-space)] right-5 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-200 active:scale-95 md:right-[calc((100vw-430px)/2+24px)]"
             aria-label="연락처 목록 상단으로 이동"
           >
             <ArrowUp size={20} strokeWidth={2.4} />

@@ -26,7 +26,7 @@ export default function MyPageTab() {
   if (!isLoaded) return null;
 
   return (
-    <div className="pb-[calc(env(safe-area-inset-bottom,0px)+88px)] min-h-screen bg-white">
+    <div className="pb-[var(--tabbar-space)] min-h-screen bg-white">
       {/* 헤더 — 제목 + 우측 톱니바퀴 (설정 시트) */}
       <div className="px-5 pt-14 pb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">

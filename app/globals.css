@@ -44,6 +44,23 @@
   --color-green-100: #163d29;
 }
 
+/*
+  플로팅 탭바 하단 여백 — 값 조정은 여기 한 곳에서만.
+
+  --tabbar-inset: 하단 시스템 영역 보정값.
+    iOS(뷰포트에 viewport-fit=cover 미설정)에서는 env()가 0이라 여백이 10px로 붙는다.
+    반면 토스 안드로이드 WebView는 3버튼 내비바 높이(48px)를 그대로 보고해서
+    탭바가 화면에서 58px이나 떠 보였다(갤럭시 실측). iOS 홈 인디케이터 높이인
+    34px을 상한으로 둬서, 시스템 버튼과는 겹치지 않으면서 헛여백만 잘라낸다.
+  --tabbar-gap:   탭바 pill 을 화면 하단에서 띄우는 거리
+  --tabbar-space: 탭 콘텐츠 하단 여백 (탭바 점유분 + 여유 22px)
+*/
+:root {
+  --tabbar-inset: min(env(safe-area-inset-bottom, 0px), 34px);
+  --tabbar-gap: calc(var(--tabbar-inset) + 10px);
+  --tabbar-space: calc(var(--tabbar-inset) + 88px);
+}
+
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;

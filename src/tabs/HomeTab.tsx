@@ -415,7 +415,7 @@ export default function HomeTab() {
 
   return (
     // 하단 여백 = 플로팅 탭바(56px) + 띄움(10px) + 여유(22px)
-    <div className="pb-[calc(env(safe-area-inset-bottom,0px)+88px)]">
+    <div className="pb-[var(--tabbar-space)]">
       {/* 헤더 */}
       <div className="px-5 pt-8 pb-4 max-[360px]:px-4">
         <div className="flex items-center justify-between gap-3">

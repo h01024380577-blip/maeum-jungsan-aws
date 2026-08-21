@@ -146,7 +146,7 @@ export default function CalendarTab() {
   const emptyMessage = selectedDate ? '일정이 없습니다' : '이번 달 일정이 없습니다';
 
   return (
-    <div className="pb-[calc(env(safe-area-inset-bottom,0px)+88px)]">
+    <div className="pb-[var(--tabbar-space)]">
       <SamsungCalendarHintDialog
         isOpen={samsungHintOpen}
         onConfirm={handleSamsungHintConfirm}
